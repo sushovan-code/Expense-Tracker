@@ -11,7 +11,7 @@ import { ErrorState, LoadingState } from '@/shared/ui/States'
 import { PERMISSION_CLAIM, type UserDetail } from '../model/types'
 import { ROLE_ORDER } from '../viewModels/useAdminAccess'
 import type { UserEditorViewModel } from '../viewModels/useUserEditorViewModel'
-import { UserStatus } from './badges'
+import { UserStatus } from './UserStatus'
 
 /** Body of the "Manage user" dialog. */
 export function UserEditor({ vm }: { vm: UserEditorViewModel }) {

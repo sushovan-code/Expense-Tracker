@@ -4,7 +4,8 @@ import type { PagedResponse, SortDirection } from '@/shared/types'
 import { SortHeader } from '@/shared/ui/grid/SortHeader'
 import { ariaSort } from '@/shared/ui/grid/sorting'
 import type { UserSortField, UserSummary } from '../model/types'
-import { RoleBadges, UserStatus } from './badges'
+import { RoleBadges } from './RoleBadges'
+import { UserStatus } from './UserStatus'
 
 interface UsersTableProps {
   data: PagedResponse<UserSummary>
