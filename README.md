@@ -77,7 +77,7 @@ Every API endpoint requires authentication (except sign-in, health and, in Devel
 - **Scripts:** create a personal API key on the account page (or `POST /api/auth/api-keys`) and send it as `x-api-key`. Keys expire and can be limited to specific permissions.
 - **Scalar/OpenAPI:** call `POST /api/auth/login`, then paste the `accessToken` into the Bearer auth.
 
-Outside Development, set these through environment variables or a secret store (never committed files): `Authentication__Jwt__SigningKey` (32+ characters, required to start), and `Identity__Seed__AdminEmail` / `Identity__Seed__AdminPassword` to bootstrap the first SuperAdmin. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#security-authentication--rbac) for the design.
+Outside Development, set these through environment variables or a secret store (never committed files): `Authentication__Jwt__SigningKey` (32+ characters, required to start), and `Identity__Seed__AdminEmail` / `Identity__Seed__AdminPassword` to bootstrap the first SuperAdmin. See [docs/architecture.md](docs/architecture.md#security-authentication--rbac) for the design.
 
 ## Observability (OpenTelemetry)
 
@@ -237,7 +237,7 @@ There are sample requests in `src/ExpenseTracker.Api/ExpenseTracker.Api.http`.
 
 ## Architecture
 
-See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the full picture. In short:
+See **[docs/architecture.md](docs/architecture.md)** for the full picture. In short:
 
 - **Backend: Clean Architecture.** `Domain` (entities + rules, no dependencies) ← `Application` (use cases + ports) ← `Infrastructure` (EF Core adapters) ← `Api` (minimal APIs, SignalR, composition root).
   - Implementations are `internal` behind interfaces.
@@ -273,7 +273,7 @@ Directory.Packages.props          Central NuGet versions
 global.json                       SDK pin + Microsoft Testing Platform
 .editorconfig                     Code style
 aspire.config.json                Points the Aspire CLI at the AppHost
-docs/ARCHITECTURE.md              Layers, dependency rules, MVVM mapping
+docs/architecture.md              Layers, dependency rules, MVVM mapping
 src/
   ExpenseTracker.Domain/          Entities, business rules, Result/Error
   ExpenseTracker.Application/     Use cases, ports (interfaces), DTOs, paging, log event ids
