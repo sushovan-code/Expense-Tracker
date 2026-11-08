@@ -1,6 +1,3 @@
-using ExpenseTracker.Application.Security;
-using Microsoft.AspNetCore.Authorization;
-
 namespace ExpenseTracker.Api.Auth;
 
 internal static class PermissionEndpointExtensions

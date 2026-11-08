@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ExpenseTracker.Domain.Common;
 
 public enum ErrorKind

@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Features.Categories;
-using ExpenseTracker.Domain.Categories;
 
 namespace ExpenseTracker.Api.Contracts;
 

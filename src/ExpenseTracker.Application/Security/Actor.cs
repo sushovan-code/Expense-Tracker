@@ -1,5 +1,3 @@
-using ExpenseTracker.Domain.Common;
-
 namespace ExpenseTracker.Application.Security;
 
 /// <summary>The authenticated user performing an administrative action.</summary>

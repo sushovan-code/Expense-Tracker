@@ -1,10 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using ExpenseTracker.Application.Abstractions.Identity;
-using ExpenseTracker.Application.Features.Identity;
-using ExpenseTracker.Application.Security;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ExpenseTracker.Api.Auth;

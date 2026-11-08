@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ExpenseTracker.Api.Auth;
 using ExpenseTracker.Api.Configuration;
 using ExpenseTracker.Api.Endpoints;
@@ -5,8 +7,6 @@ using ExpenseTracker.Api.Middleware;
 using ExpenseTracker.Api.Realtime;
 using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;

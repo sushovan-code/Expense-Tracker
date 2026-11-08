@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Configuration;
-
 namespace ExpenseTracker.Api.Configuration;
 
 /// <summary>Environment-specific switches, bound from the <c>Features</c> section.</summary>

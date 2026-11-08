@@ -1,9 +1,6 @@
 using ExpenseTracker.Api.Auth;
 using ExpenseTracker.Api.Contracts;
-using ExpenseTracker.Api.Http;
-using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Features.Budgets;
-using ExpenseTracker.Application.Features.Categories;
 using ExpenseTracker.Application.Security;
 using Microsoft.AspNetCore.Http.HttpResults;
 

@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Identity;
-
 namespace ExpenseTracker.Infrastructure.Identity;
 
 /// <summary>A personal API key. Only a SHA-256 hash of the key is stored; <see cref="Prefix"/> identifies it in lists.</summary>

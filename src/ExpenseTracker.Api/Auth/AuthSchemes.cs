@@ -1,7 +1,3 @@
-using System.Security.Claims;
-using ExpenseTracker.Application.Features.Identity;
-using ExpenseTracker.Application.Security;
-
 namespace ExpenseTracker.Api.Auth;
 
 internal static class AuthSchemes

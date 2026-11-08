@@ -1,6 +1,5 @@
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Domain.Categories;
-using ExpenseTracker.Domain.Expenses;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.Persistence.Repositories;

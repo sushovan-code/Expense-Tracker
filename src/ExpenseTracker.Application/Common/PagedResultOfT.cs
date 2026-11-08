@@ -1,5 +1,3 @@
-using ExpenseTracker.Domain.Common;
-
 namespace ExpenseTracker.Application.Common;
 
 /// <summary>One page of results plus what a grid needs to render its pager.</summary>

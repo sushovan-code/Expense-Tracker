@@ -1,6 +1,5 @@
 using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Features.Categories;
-using ExpenseTracker.Application.Features.Expenses;
 
 namespace ExpenseTracker.Application.Abstractions.Queries;
 

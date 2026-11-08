@@ -1,5 +1,3 @@
-using ExpenseTracker.Domain.Common;
-
 namespace ExpenseTracker.Application.Common;
 
 /// <summary>A validated, allow-listed sort.</summary>

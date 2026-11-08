@@ -1,7 +1,4 @@
-using System.Linq.Expressions;
 using ExpenseTracker.Application.Abstractions.Queries;
-using ExpenseTracker.Application.Common;
-using ExpenseTracker.Application.Features.Categories;
 using ExpenseTracker.Domain.Categories;
 using Microsoft.EntityFrameworkCore;
 

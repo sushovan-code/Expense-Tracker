@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Identity;
-
 namespace ExpenseTracker.Infrastructure.Identity;
 
 /// <summary>

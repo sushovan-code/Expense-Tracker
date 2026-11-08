@@ -1,4 +1,3 @@
-using ExpenseTracker.Domain.Categories;
 using ExpenseTracker.Domain.Expenses;
 
 namespace ExpenseTracker.Application.Abstractions.Persistence;

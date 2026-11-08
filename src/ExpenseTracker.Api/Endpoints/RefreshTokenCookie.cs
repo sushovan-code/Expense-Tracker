@@ -1,11 +1,3 @@
-using System.Security.Claims;
-using ExpenseTracker.Api.Auth;
-using ExpenseTracker.Api.Contracts;
-using ExpenseTracker.Api.Http;
-using ExpenseTracker.Application.Features.Identity;
-using ExpenseTracker.Application.Security;
-using Microsoft.AspNetCore.Http.HttpResults;
-
 namespace ExpenseTracker.Api.Endpoints;
 
 /// <summary>

@@ -1,6 +1,4 @@
 using ExpenseTracker.Application.Common;
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracker.Api.Middleware;
 

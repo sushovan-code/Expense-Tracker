@@ -1,12 +1,4 @@
-using ExpenseTracker.Application.Abstractions.Identity;
-using ExpenseTracker.Application.Common;
-using ExpenseTracker.Application.Features.Identity;
-using ExpenseTracker.Domain.Common;
-using ExpenseTracker.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ExpenseTracker.Infrastructure.Identity;
 

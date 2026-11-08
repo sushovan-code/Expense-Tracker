@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text;
 using ExpenseTracker.Application.Abstractions.Identity;
 using ExpenseTracker.Application.Features.Identity;
 using ExpenseTracker.Application.Security;

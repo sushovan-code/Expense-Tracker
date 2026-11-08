@@ -1,6 +1,3 @@
-using ExpenseTracker.Domain.Categories;
-using ExpenseTracker.Domain.Common;
-
 namespace ExpenseTracker.Domain.Expenses;
 
 /// <summary>The editable details of an expense, validated as a whole.</summary>

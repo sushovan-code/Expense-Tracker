@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace ExpenseTracker.Domain.Common;
 
 /// <summary>An expected failure (a broken rule, a missing entity). Unexpected failures are exceptions.</summary>
