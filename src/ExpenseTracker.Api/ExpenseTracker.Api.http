@@ -1,0 +1,99 @@
+@api = http://localhost:7010
+
+### Sign in (Development seeds superadmin@, admin@, user@ and reader@expensetracker.local)
+# @name login
+POST {{api}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@expensetracker.local",
+  "password": "SuperAdmin123"
+}
+
+###
+@token = {{login.response.body.accessToken}}
+
+GET {{api}}/api/auth/me
+Authorization: Bearer {{token}}
+
+###
+
+GET {{api}}/api/categories
+Authorization: Bearer {{token}}
+
+###
+
+GET {{api}}/api/expenses?from=2026-10-01&to=2026-10-31
+Authorization: Bearer {{token}}
+
+###
+
+GET {{api}}/api/expenses/summary?from=2026-01-01&to=2026-12-31
+Authorization: Bearer {{token}}
+
+###
+
+POST {{api}}/api/expenses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Groceries",
+  "amount": 1250.50,
+  "date": "2026-10-05",
+  "categoryId": 1,
+  "notes": "Weekly shopping"
+}
+
+###
+
+PUT {{api}}/api/expenses/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Groceries (updated)",
+  "amount": 1300,
+  "date": "2026-10-05",
+  "categoryId": 1
+}
+
+###
+
+DELETE {{api}}/api/expenses/1
+Authorization: Bearer {{token}}
+
+### Create a read-only API key (the key is shown once)
+# @name apiKey
+POST {{api}}/api/auth/api-keys
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Reporting script",
+  "scopes": ["expense.view", "expense.export"],
+  "expiresInDays": 30
+}
+
+### Call the API with the key
+GET {{api}}/api/expenses
+x-api-key: {{apiKey.response.body.key}}
+
+### Administration (Admin or above)
+GET {{api}}/api/admin/users
+Authorization: Bearer {{token}}
+
+###
+
+GET {{api}}/api/admin/roles
+Authorization: Bearer {{token}}
+
+###
+
+PUT {{api}}/api/admin/roles/Reader/permissions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "permissions": ["expense.view", "expense.export", "category.view", "budget.view", "apikey.manage"]
+}

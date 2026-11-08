@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Paint the right background before the app's CSS loads. */
+      html { background: #eef0fa; }
+      html[data-theme='dark'] { background: #05060f; }
+    </style>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash of the wrong theme.
+      // Keep the storage key in sync with src/shared/theme/theme.ts.
+      (function () {
+        var mode = null;
+        try {
+          mode = localStorage.getItem('theme-mode');
+        } catch (e) {}
+        var theme =
+          mode === 'light' || mode === 'dark'
+            ? mode
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

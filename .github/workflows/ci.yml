@@ -1,0 +1,103 @@
+# Runs on every pull request to main and every push to main.
+# Needs no cloud resources, so it always runs, even when you skip deployment.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  WEB_DIR: src/web/<product>-web   # replace <product>; delete the frontend steps if the repo has no frontend
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (warnings are reported, not fatal)
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Check formatting (whitespace and error-level rules only, so warnings don't fail CI)
+        run: dotnet format --verify-no-changes --no-restore --severity error
+
+      - name: Backend tests (Testcontainers uses the runner's Docker)
+        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ env.WEB_DIR }}/package-lock.json
+
+      - name: Frontend install, lint, test, build
+        working-directory: ${{ env.WEB_DIR }}
+        run: |
+          npm ci
+          npm run lint
+          npm run test:ci
+          npm run build
+
+  diagrams:
+    # Runs only on PRs and only when the repo has docs/diagrams.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Skip if there are no diagrams
+        id: has
+        run: echo "found=$([ -d docs/diagrams ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Fail if a diagram source changed without its image
+        if: steps.has.outputs.found == 'true'
+        shell: pwsh
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: ./scripts/check-diagrams.ps1
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.found == 'true'
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        if: steps.has.outputs.found == 'true'
+        with:
+          python-version: '3.12'
+      - name: Install Graphviz and diagrams
+        if: steps.has.outputs.found == 'true'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q graphviz
+          pip install diagrams
+      - name: Render every diagram (proves the sources are valid)
+        if: steps.has.outputs.found == 'true'
+        shell: pwsh
+        run: ./scripts/render-diagrams.ps1
+      - uses: actions/upload-artifact@v4
+        if: steps.has.outputs.found == 'true'
+        with:
+          name: diagrams
+          path: |
+            docs/diagrams/*.svg
+            docs/diagrams/*.png
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

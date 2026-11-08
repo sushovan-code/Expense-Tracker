@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ExpenseTracker.Domain/ExpenseTracker.Domain.csproj" />
+    <Project Path="src/ExpenseTracker.Application/ExpenseTracker.Application.csproj" />
+    <Project Path="src/ExpenseTracker.Infrastructure/ExpenseTracker.Infrastructure.csproj" />
+    <Project Path="src/ExpenseTracker.Api/ExpenseTracker.Api.csproj" />
+    <Project Path="src/ExpenseTracker.ServiceDefaults/ExpenseTracker.ServiceDefaults.csproj" />
+    <Project Path="src/ExpenseTracker.AppHost/ExpenseTracker.AppHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ExpenseTracker.Domain.Tests/ExpenseTracker.Domain.Tests.csproj" />
+    <Project Path="tests/ExpenseTracker.Application.Tests/ExpenseTracker.Application.Tests.csproj" />
+    <Project Path="tests/ExpenseTracker.ArchitectureTests/ExpenseTracker.ArchitectureTests.csproj" />
+    <Project Path="tests/ExpenseTracker.Api.IntegrationTests/ExpenseTracker.Api.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="docs/ARCHITECTURE.md" />
+    <File Path="tests/Directory.Build.props" />
+  </Folder>
+</Solution>

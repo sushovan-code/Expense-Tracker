@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "launchUrl": "scalar",
+      "applicationUrl": "http://localhost:7010",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "launchUrl": "scalar",
+      "applicationUrl": "https://localhost:7011;http://localhost:7010",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "staging": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "launchUrl": "scalar",
+      "applicationUrl": "http://localhost:7020",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Staging",
+        "Authentication__Jwt__SigningKey": "local-staging-only-signing-key--set-a-real-one-when-deployed",
+        "Identity__Seed__AdminEmail": "superadmin@expensetracker.local",
+        "Identity__Seed__AdminPassword": "SuperAdmin123"
+      }
+    },
+    "production": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:7030",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "ConnectionStrings__DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=ExpenseTracker_Production;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true",
+        "Features__MigrateDatabaseOnStartup": "true",
+        "Authentication__Jwt__SigningKey": "local-production-only-signing-key--set-a-real-one-when-deployed",
+        "Identity__Seed__AdminEmail": "superadmin@expensetracker.local",
+        "Identity__Seed__AdminPassword": "SuperAdmin123"
+      }
+    }
+  }
+}

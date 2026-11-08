@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "src/ExpenseTracker.AppHost/ExpenseTracker.AppHost.csproj"
+  }
+}

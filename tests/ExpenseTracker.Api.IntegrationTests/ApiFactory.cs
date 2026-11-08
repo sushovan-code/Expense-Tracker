@@ -1,0 +1,77 @@
+using System.Collections.Concurrent;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using ExpenseTracker.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace ExpenseTracker.Api.IntegrationTests;
+
+/// <summary>
+/// Hosts the real API (all layers) in memory against its own LocalDB database, which is created by the
+/// app's migrations on startup and dropped when the test run ends. Never touches the development database.
+/// Seeds a SuperAdmin plus one demo user per lower role, all signing in over HTTPS like a real client.
+/// </summary>
+public sealed class ApiFactory : WebApplicationFactory<Program>
+{
+    public const string SuperAdminEmail = "superadmin@tests.local";
+    public const string SuperAdminPassword = "SuperAdmin123";
+    public const string AdminEmail = "admin@tests.local";
+    public const string UserEmail = "user@tests.local";
+    public const string ReaderEmail = "reader@tests.local";
+    public const string DemoPassword = "Password123";
+
+    private readonly string _connectionString =
+        $"Server=(localdb)\\MSSQLLocalDB;Database=ExpenseTracker_IntegrationTests_{Guid.NewGuid():N};" +
+        "Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+
+    private readonly ConcurrentDictionary<string, string> _accessTokens = new();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("ConnectionStrings:DefaultConnection", _connectionString);
+        builder.UseSetting("Features:MigrateDatabaseOnStartup", "true");
+        builder.UseSetting("Features:ApiDocs", "true");
+        builder.UseSetting("Authentication:Jwt:SigningKey", "integration-tests-signing-key-0123456789abcdef");
+        builder.UseSetting("Identity:Seed:AdminEmail", SuperAdminEmail);
+        builder.UseSetting("Identity:Seed:AdminPassword", SuperAdminPassword);
+        builder.UseSetting("Identity:Seed:DemoUsers", "true");
+        builder.UseSetting("Identity:Seed:DemoPassword", DemoPassword);
+    }
+
+    /// <summary>A client with no credentials. HTTPS, so the Secure refresh cookie round-trips.</summary>
+    public HttpClient CreateAnonymousClient(bool handleCookies = true) =>
+        CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), HandleCookies = handleCookies });
+
+    /// <summary>A client that sends a bearer token for the given account (tokens are cached per account).</summary>
+    public async Task<HttpClient> CreateClientForAsync(string email, string password = DemoPassword)
+    {
+        var client = CreateAnonymousClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(email, password));
+        return client;
+    }
+
+    public async Task<string> GetAccessTokenAsync(string email, string password = DemoPassword)
+    {
+        if (_accessTokens.TryGetValue(email, out var cached)) return cached;
+
+        using var client = CreateAnonymousClient();
+        var response = await client.PostAsJsonAsync("/api/auth/login", new { email, password });
+        response.EnsureSuccessStatusCode();
+        var token = (await response.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
+        return _accessTokens[email] = token;
+    }
+
+    private sealed record TokenResponse(string AccessToken);
+
+    public override async ValueTask DisposeAsync()
+    {
+        await using (var scope = Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().DeleteAsync();
+        }
+        await base.DisposeAsync();
+    }
+}

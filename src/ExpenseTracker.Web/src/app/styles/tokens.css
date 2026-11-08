@@ -1,0 +1,109 @@
+/*
+ * Design tokens. `data-theme` on <html> is set before first paint by the inline
+ * script in index.html and kept in sync by ThemeProvider.
+ */
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  --danger-gradient: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+}
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Background */
+  --bg-base: #eef0fa;
+  --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 45%, #e0f2fe 100%);
+  --blob-1: #818cf8;
+  --blob-2: #f472b6;
+  --blob-3: #22d3ee;
+  --blob-4: #fbbf24;
+  --blob-opacity: 0.75;
+  --grid-color: rgb(15 23 42 / 0.05);
+  --grain-opacity: 0.07;
+
+  /* Surfaces (glass) */
+  --surface: rgb(255 255 255 / 0.6);
+  --surface-elevated: rgb(255 255 255 / 0.9);
+  --surface-2: rgb(255 255 255 / 0.7);
+  --surface-hover: rgb(99 102 241 / 0.07);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --border: rgb(15 23 42 / 0.08);
+  --border-strong: rgb(15 23 42 / 0.16);
+
+  /* Text */
+  --text: #0f172a;
+  --text-muted: #5b6478;
+  --title-gradient: linear-gradient(120deg, #1e1b4b 0%, #4f46e5 55%, #db2777 100%);
+
+  /* Accent & status */
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-soft: rgb(99 102 241 / 0.12);
+  --chart-bar: rgb(99 102 241 / 0.22);
+  --danger: #e11d48;
+  --danger-soft: rgb(225 29 72 / 0.1);
+  --success: #059669;
+  --warning: #d97706;
+  --info: #2563eb;
+  --up: #e11d48;
+  --down: #059669;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -8px rgb(30 27 75 / 0.12);
+  --shadow-md: 0 12px 32px -8px rgb(30 27 75 / 0.2);
+  --shadow-lg: 0 32px 80px -16px rgb(30 27 75 / 0.35);
+  --glow: 0 10px 30px -8px rgb(99 102 241 / 0.65);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-base: #05060f;
+  --bg-gradient: radial-gradient(ellipse 120% 80% at 50% -10%, #1e1b4b 0%, #0b0b1e 45%, #05060f 100%);
+  --blob-1: #4f46e5;
+  --blob-2: #c026d3;
+  --blob-3: #0891b2;
+  --blob-4: #7c3aed;
+  --blob-opacity: 0.55;
+  --grid-color: rgb(255 255 255 / 0.035);
+  --grain-opacity: 0.09;
+
+  --surface: rgb(17 19 38 / 0.55);
+  --surface-elevated: rgb(22 24 46 / 0.92);
+  --surface-2: rgb(255 255 255 / 0.04);
+  --surface-hover: rgb(255 255 255 / 0.06);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --border: rgb(255 255 255 / 0.07);
+  --border-strong: rgb(255 255 255 / 0.14);
+
+  --text: #e8eaf6;
+  --text-muted: #9ba3c0;
+  --title-gradient: linear-gradient(120deg, #ffffff 0%, #c4b5fd 55%, #f9a8d4 100%);
+
+  --accent: #8b8dff;
+  --accent-hover: #a5a7ff;
+  --accent-soft: rgb(139 141 255 / 0.16);
+  --chart-bar: rgb(139 141 255 / 0.2);
+  --danger: #fb7185;
+  --danger-soft: rgb(251 113 133 / 0.14);
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --up: #fb7185;
+  --down: #34d399;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -8px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 16px 40px -8px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 32px 80px -12px rgb(0 0 0 / 0.75);
+  --glow: 0 10px 34px -6px rgb(139 92 246 / 0.7);
+}

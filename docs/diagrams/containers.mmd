@@ -1,0 +1,25 @@
+%% Container view. Claude rewrites this from the code via /update-diagrams.
+%% Accent (#2563EB) marks this system's own containers; grey is everything else.
+flowchart LR
+  classDef ours fill:#DBEAFE,stroke:#2563EB,color:#0F172A
+  classDef ext fill:#F1F5F9,stroke:#94A3B8,color:#334155,stroke-dasharray:4 3
+
+  user([User])
+  web[Web app<br/><small>Angular or React SPA</small>]:::ours
+  api[API<br/><small>.NET 10 Minimal API</small>]:::ours
+  db[(Database)]:::ours
+  cache[(Redis cache)]:::ours
+  idp[Identity provider<br/><small>Auth0 / Keycloak / ASP.NET Core Identity</small>]:::ext
+
+  user --> web
+  web -->|HTTPS, JSON| api
+  web -->|OIDC login| idp
+  api --> db
+  api --> cache
+  api -. SignalR toasts .-> web
+
+  subgraph Legend
+    direction LR
+    l1[This system]:::ours
+    l2[External]:::ext
+  end
