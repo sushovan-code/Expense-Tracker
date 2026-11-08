@@ -55,3 +55,7 @@ dotnet_naming_style.async_suffix.capitalization = pascal_case
 dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait not needed in ASP.NET Core
 dotnet_diagnostic.CA2016.severity = warning   # forward CancellationToken
 dotnet_diagnostic.CA1848.severity = suggestion # LoggerMessage delegates for hot paths
+
+# EF Core migrations are generated: skip style analyzers and dotnet format for them.
+[**/Migrations/*.cs]
+generated_code = true
