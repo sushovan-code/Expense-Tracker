@@ -5,6 +5,8 @@ using ExpenseTracker.Api.Middleware;
 using ExpenseTracker.Api.Realtime;
 using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
@@ -17,6 +19,9 @@ internal static partial class DependencyInjection
     /// <summary>HTTP/realtime presentation concerns: problem details, authentication/authorization, OpenAPI, CORS, SignalR and its notifier.</summary>
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
+        // JSON: enums travel as camelCase strings ("exceeded", not 2), per the naming conventions.
+        services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
         services.AddValidation();
         services.AddProblemDetails(options => options.CustomizeProblemDetails = ProblemDetailsSetup.Customize);
         services.AddExceptionHandler<GlobalExceptionHandler>();

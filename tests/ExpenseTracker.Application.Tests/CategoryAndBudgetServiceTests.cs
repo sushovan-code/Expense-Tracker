@@ -4,6 +4,7 @@ using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Features.Budgets;
 using ExpenseTracker.Application.Features.Categories;
+using ExpenseTracker.Domain.Budgets;
 using ExpenseTracker.Domain.Categories;
 using ExpenseTracker.Domain.Common;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -114,7 +115,7 @@ public class BudgetServiceTests
 
         var overview = await _service.GetOverviewAsync(null, null, Ct);
 
-        overview.Categories.Select(c => c.State).ShouldBe(["ok", "warning", "exceeded"]);
+        overview.Categories.Select(c => c.State).ShouldBe([BudgetState.Ok, BudgetState.Warning, BudgetState.Exceeded]);
         overview.TotalBudget.ShouldBe(300m);
         overview.TotalSpent.ShouldBe(290m);
     }

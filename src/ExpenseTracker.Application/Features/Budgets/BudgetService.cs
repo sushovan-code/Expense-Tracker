@@ -14,8 +14,7 @@ public sealed record BudgetStatusDto(
     decimal Spent,
     decimal Remaining,
     decimal PercentUsed,
-    /// <summary>ok, warning or exceeded.</summary>
-    string State);
+    BudgetState State);
 
 public sealed record BudgetOverviewDto(int Year, int Month, decimal TotalBudget, decimal TotalSpent, IReadOnlyList<BudgetStatusDto> Categories);
 
@@ -44,7 +43,7 @@ internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider
             .Select(s => ToStatus(s, s.Budget!.Value))
             .ToList();
 
-        LogBudgetStatus(logger, from.Year, from.Month, statuses.Count, statuses.Count(s => s.State == "exceeded"));
+        LogBudgetStatus(logger, from.Year, from.Month, statuses.Count, statuses.Count(s => s.State == BudgetState.Exceeded));
         return new BudgetOverviewDto(from.Year, from.Month, statuses.Sum(s => s.Budget), statuses.Sum(s => s.Spent), statuses);
     }
 
@@ -64,7 +63,7 @@ internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider
     private static BudgetStatusDto ToStatus(CategorySpending s, decimal budget) => new(
         s.CategoryId, s.Name, s.Color, budget, s.Spent, budget - s.Spent,
         BudgetPolicy.PercentUsed(budget, s.Spent),
-        BudgetPolicy.StateOf(budget, s.Spent).ToString().ToLowerInvariant());
+        BudgetPolicy.StateOf(budget, s.Spent));
 
     [LoggerMessage(EventId = LogEvents.BudgetStatusComputed, Level = LogLevel.Debug,
         Message = "Computed budget status for {Year}-{Month}: {BudgetedCategories} budgeted categories, {ExceededCategories} over budget")]
