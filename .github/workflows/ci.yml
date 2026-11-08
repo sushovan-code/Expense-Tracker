@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  WEB_DIR: src/web/<product>-web   # replace <product>; delete the frontend steps if the repo has no frontend
+  WEB_DIR: src/ExpenseTracker.Web
 
 jobs:
   build-and-test:
@@ -33,8 +33,13 @@ jobs:
       - name: Check formatting (whitespace and error-level rules only, so warnings don't fail CI)
         run: dotnet format --verify-no-changes --no-restore --severity error
 
-      - name: Backend tests (Testcontainers uses the runner's Docker)
-        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"
+      # The integration tests need SQL Server LocalDB (Windows only), so CI runs the unit and
+      # architecture tests until the SQLite slice (docs/roadmap.md, slice 1) makes them portable.
+      - name: Backend tests (unit and architecture)
+        run: |
+          for project in tests/ExpenseTracker.Domain.Tests tests/ExpenseTracker.Application.Tests tests/ExpenseTracker.ArchitectureTests; do
+            dotnet test --project "$project" --no-build --configuration Release
+          done
 
       - uses: actions/setup-node@v4
         with:
@@ -47,7 +52,7 @@ jobs:
         run: |
           npm ci
           npm run lint
-          npm run test:ci
+          npm test
           npm run build
 
   diagrams:
