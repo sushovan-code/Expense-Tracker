@@ -52,7 +52,7 @@ cd src\ExpenseTracker.Api
 dotnet run --launch-profile http
 
 # Terminal 2 – client (development)
-cd src\ExpenseTracker.Web
+cd src\web\expense-tracker-web
 npm install
 npm run dev
 ```
@@ -93,7 +93,7 @@ Under Aspire, everything shows up in one dashboard, from the browser to the data
 **How it's wired:**
 
 - **Backend:** `src/ExpenseTracker.ServiceDefaults` (the standard Aspire service defaults) adds OpenTelemetry logging, tracing and metrics, health checks (`/health`, `/alive`, Development only), service discovery and HTTP resilience. The API adds SqlClient tracing and a database health check. Telemetry is exported over OTLP only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, which Aspire does for you.
-- **Browser:** `src/ExpenseTracker.Web/src/shared/telemetry/` uses the official OpenTelemetry JS Web SDK, exporting OTLP/HTTP (protobuf) to the dashboard:
+- **Browser:** `src/web/expense-tracker-web/src/shared/telemetry/` uses the official OpenTelemetry JS Web SDK, exporting OTLP/HTTP (protobuf) to the dashboard:
   - `otel.ts` sets up the tracer and logger providers, plus fetch, document-load and user-interaction instrumentation. It's lazy-loaded, so it only ships when telemetry is enabled.
   - `logger.ts` is a structured logger that emits OpenTelemetry log records using semantic-convention attributes such as `exception.*`, `http.*` and `url.*`, and mirrors them to the console.
   - The AppHost injects the standard `OTEL_*` variables (endpoint, API key header, service name) into the Vite process, and `vite.config.ts` hands them to the bundle.
@@ -139,7 +139,7 @@ Under Aspire, everything shows up in one dashboard, from the browser to the data
 
 Settings live in a `configs/` folder on each side. Each client mode pairs with the server environment of the same name.
 
-| Environment | Server (`src/ExpenseTracker.Api`) | Client (`src/ExpenseTracker.Web`) | Client port → API port | Database (local) | API docs |
+| Environment | Server (`src/ExpenseTracker.Api`) | Client (`src/web/expense-tracker-web`) | Client port → API port | Database (local) | API docs |
 | --- | --- | --- | --- | --- | --- |
 | **Development** | `dotnet run --launch-profile http`, or all-in-one via Aspire | `npm run dev` | 5010 → 7010 | `ExpenseTracker` | ✅ `/scalar` |
 | **Staging** | `dotnet run --launch-profile staging` | `npm run dev:staging`, or `build:staging` + `preview:staging` | 5020 → 7020 | `ExpenseTracker_Staging` | ✅ `/scalar` |
@@ -167,7 +167,7 @@ Settings:
 
 The local `production` launch profile supplies its connection string through an environment variable, so `appsettings.Production.json` never holds one.
 
-### Client: `src/ExpenseTracker.Web/configs/`
+### Client: `src/web/expense-tracker-web/configs/`
 
 | File | Purpose |
 | --- | --- |
@@ -189,8 +189,8 @@ Only `VITE_*` variables reach the browser bundle. `CLIENT_PORT` and `API_PROXY_T
 
 | What | Where |
 | --- | --- |
-| Currency and locale | `src/ExpenseTracker.Web/src/shared/config/env.ts` (default `INR` / `en-IN`) |
-| Theme colors | `src/ExpenseTracker.Web/src/app/styles/tokens.css` |
+| Currency and locale | `src/web/expense-tracker-web/src/shared/config/env.ts` (default `INR` / `en-IN`) |
+| Theme colors | `src/web/expense-tracker-web/src/app/styles/tokens.css` |
 
 ## Database migrations
 
@@ -258,7 +258,7 @@ See **[docs/architecture.md](docs/architecture.md)** for the full picture. In sh
 dotnet test
 
 # Web: model, components and view-models (Vitest + Testing Library)
-cd src\ExpenseTracker.Web
+cd src\web\expense-tracker-web
 npm test          # or: npm run check  (type-check + lint + tests)
 ```
 
@@ -281,7 +281,7 @@ src/
   ExpenseTracker.Api/             Endpoints, contracts, middleware, SignalR, configs/, composition root
   ExpenseTracker.ServiceDefaults/ OpenTelemetry, health checks, resilience
   ExpenseTracker.AppHost/         Aspire (development only)
-  ExpenseTracker.Web/             React app
+  web/expense-tracker-web/       React app
     configs/                      Vite .env files per mode
     src/app/                      Composition root: providers, DI wiring, query client, routes, layout, styles
     src/features/<feature>/       api/ · model/ · viewModels/ · components/ · pages/ · index.ts

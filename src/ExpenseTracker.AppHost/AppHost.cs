@@ -19,7 +19,7 @@ var api = builder.AddProject<Projects.ExpenseTracker_Api>("api", launchProfileNa
     .WithUrlForEndpoint("http", _ => new ResourceUrlAnnotation { Url = "/scalar", DisplayText = "Scalar API reference" });
 
 // `npm run dev` → Vite in "development" mode (client/configs/.env.development), http://localhost:5010.
-builder.AddViteApp("client", "../ExpenseTracker.Web")
+builder.AddViteApp("client", "../web/expense-tracker-web")
     .WithEndpoint("http", endpoint => endpoint.Port = 5010)
     // Overrides API_PROXY_TARGET from .env.development with the API's actual endpoint.
     .WithEnvironment("API_PROXY_TARGET", api.GetEndpoint("http"))

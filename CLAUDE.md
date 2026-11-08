@@ -8,9 +8,9 @@ Family expense tracking with categories, monthly budgets and live updates. Portf
 ## Commands
 - Run everything locally: `aspire run` (AppHost: `src/ExpenseTracker.AppHost`)
 - Backend tests: `dotnet test --solution ExpenseTracker.slnx`
-- Frontend tests: `npm test --prefix src/ExpenseTracker.Web`
+- Frontend tests: `npm test --prefix src/web/expense-tracker-web`
 - Render diagrams: `pwsh -File scripts/render-diagrams.ps1`
-- Format: `dotnet format ExpenseTracker.slnx` · `npm run lint --prefix src/ExpenseTracker.Web`
+- Format: `dotnet format ExpenseTracker.slnx` · `npm run lint --prefix src/web/expense-tracker-web`
 
 ## Standards (read the relevant file before working in that area)
 - Coding standards, best practices and design principles (always applies): @docs/standards/coding-standards.md
