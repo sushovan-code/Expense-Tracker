@@ -175,4 +175,15 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await response.Content.ReadAsStringAsync(Ct)).ShouldContain("ListExpenses");
     }
+
+    [Fact]
+    public async Task ApiResponses_Always_CarrySecurityHeaders()
+    {
+        var response = await _client.GetAsync("/api/categories/lookup", Ct);
+
+        response.Headers.GetValues("X-Content-Type-Options").ShouldBe(["nosniff"]);
+        response.Headers.GetValues("X-Frame-Options").ShouldBe(["DENY"]);
+        response.Headers.GetValues("Referrer-Policy").ShouldBe(["no-referrer"]);
+        response.Headers.GetValues("Content-Security-Policy").Single().ShouldContain("default-src 'none'");
+    }
 }

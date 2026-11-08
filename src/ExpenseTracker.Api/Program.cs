@@ -30,6 +30,13 @@ app.LogStartupConfiguration(features);
 
 // Outermost, so it records the final status code (including 500s produced by the exception handler).
 app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+if (!app.Environment.IsDevelopment())
+{
+    // Browsers only honour HSTS over HTTPS; Development keeps plain HTTP for the local ports.
+    app.UseHsts();
+}
+
 app.MapDefaultEndpoints();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
