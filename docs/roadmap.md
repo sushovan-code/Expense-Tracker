@@ -90,12 +90,12 @@ This slice replaces adoption-plan slice 2 (Testcontainers is no longer needed).
 - [ ] Unauthenticated and unauthorised tests for every new endpoint.
 - [ ] Frontend: the family page ViewModel, the member filter, the private checkbox, the accept-invite page.
 
-## 3. `feature/<n>-login-qr`: QR code on the login page
-- [ ] A small **QR icon button** on the login page (existing icon style) opens the existing Modal with a QR code of the site's URL. Scanning it on a phone opens the same website at the login page; the person signs in with the normal flow. This is not a device-login handshake, so authentication doesn't change.
-- [ ] URL source: `VITE_PUBLIC_URL` when set, otherwise `window.location.origin`. On a dev machine `localhost` isn't reachable from a phone, so the README explains running Vite with `--host` and setting `VITE_PUBLIC_URL=http://<LAN-IP>:5010`, plus the matching CORS origin.
-- [ ] Rendered as SVG in token colours, so it switches with the light and dark themes.
-- [ ] Tests: the button opens the modal, and the code encodes the configured URL.
-- [ ] *Needs approval for an npm package:* `qrcode` (MIT).
+## 3. `feature/login-qr`: QR code on the login page ✅
+- [x] A small **QR icon button** on the login page (existing icon style) opens the existing Modal with a QR code of the site's URL. Scanning it on a phone opens the same website at the login page; the person signs in with the normal flow. This is not a device-login handshake, so authentication doesn't change.
+- [x] URL source: `VITE_PUBLIC_URL` when set, otherwise `window.location.origin`. On a dev machine `localhost` isn't reachable from a phone, so the README explains running Vite with `--host` and setting `VITE_PUBLIC_URL=http://<LAN-IP>:5010`, plus the matching CORS origin.
+- [x] Rendered as SVG in token colours, so it switches with the light and dark themes.
+- [x] Tests: the button opens the modal, and the code encodes the configured URL.
+- [x] `qrcode` 1.5.4 (MIT), plus `@types/qrcode` for development. *Approved 2026-11-09.*
 
 ## 4. Follow-up features (in your order; each gets a short plan before it starts)
 - [ ] **4.1 Monthly budgets, total and per category.**

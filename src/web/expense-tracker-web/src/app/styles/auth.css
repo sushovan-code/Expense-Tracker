@@ -33,6 +33,33 @@
   letter-spacing: -0.01em;
 }
 
+/* Pushed to the far end of the brand row. */
+.auth-card__qr {
+  margin-left: auto;
+}
+
+/* ---------- Sign-in QR code ---------- */
+
+.qr-panel {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.qr-code {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.qr-panel__url {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
 .auth-card__icon {
   display: grid;
   place-items: center;

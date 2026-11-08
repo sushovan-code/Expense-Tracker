@@ -4,6 +4,7 @@ import { Field } from '@/shared/ui/Field'
 import { AlertTriangleIcon, InfoIcon, LockIcon, WalletIcon } from '@/shared/ui/Icons'
 import { PasswordInput } from '@/shared/ui/PasswordInput'
 import { LoadingState } from '@/shared/ui/States'
+import { SignInQrButton } from '../components/SignInQrButton'
 import { useLoginViewModel } from '../viewModels/useLoginViewModel'
 
 /** Accounts seeded by the API in Development (configs/appsettings.Development.json). */
@@ -30,6 +31,7 @@ export function LoginPage() {
           </span>
           <span className="brand__name">Expense Tracker</span>
           {ENV_LABEL && <span className="env-badge">{ENV_LABEL}</span>}
+          <SignInQrButton />
         </div>
 
         <h1 id="login-title" className="auth-card__title">Sign in</h1>
