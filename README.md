@@ -13,6 +13,7 @@ A full-stack expense tracker built with React, TypeScript and Vite on the fronte
 - **Categories grid**: paged, sortable and searchable, with inline editing of name, color and **monthly budget**. A category that still has expenses can't be deleted.
 - **Budgets**: an optional monthly limit per category. The dashboard shows each budget as on track, close to the limit (80% or more) or over budget. When an expense pushes a category over its limit, every open session gets an alert.
 - **Realtime (SignalR)**: changes made in one tab or by one user appear everywhere else immediately, with a notification. The header shows the live connection state and how many sessions are online. The client reconnects automatically and refreshes whatever it might have missed.
+- **Open on your phone**: the **Open on your phone** button under the sign-in form shows a large QR code of the sign-in page, with the app logo in the centre. Scan it with a phone camera to open the app there and sign in as usual. The code is always dark on white, in both themes, so cameras read it reliably.
 - **Themes**: Light, Dark or System. The choice is saved in `localStorage`. System mode follows OS changes live, and the saved theme is applied before first paint, so there's no flash of the wrong theme. Switching themes plays a circular reveal from the toggle (View Transitions API).
 - **UI**: an animated gradient-mesh background with frosted-glass surfaces, spring-animated modals (a bottom sheet on phones) with exit animations, staggered entrances, and count-up numbers. All motion respects `prefers-reduced-motion`.
 - **Notifications**: success, info, warning and error toasts. They auto-dismiss (pausing on hover), stack above open modals, and offer **Undo** after deleting an expense.
@@ -58,6 +59,17 @@ npm run dev
 ```
 
 Then open http://localhost:5010. The Vite dev server proxies `/api` requests to the API on port 7010. In Development, the API applies EF Core migrations on startup, which creates the SQLite database at `src/ExpenseTracker.Api/App_Data/expense-tracker.db` and seeds the default categories. To start again from an empty database, stop the API and delete the `App_Data` folder.
+
+#### Open it on your phone (same Wi-Fi)
+
+`localhost` only works on your PC, so give the QR code your PC's network address and let Vite listen on the network:
+
+1. Find your PC's address: `ipconfig` → "IPv4 Address", for example `192.168.1.20`.
+2. Create `src/web/expense-tracker-web/configs/.env.development.local` (git-ignored) with `VITE_PUBLIC_URL=http://192.168.1.20:5010`.
+3. Start the API as above, then the client with `npm run dev -- --host`. Allow Node.js through Windows Firewall on private networks if asked.
+4. Open http://localhost:5010, select the QR icon on the sign-in card, and scan it with your phone.
+
+The phone talks only to Vite, which proxies `/api` and `/hubs` to the API, so no CORS change is needed. Aspire (option A) doesn't start Vite with `--host`, so its QR code shows a `localhost` address (the dialog says so); use option B for phone testing.
 
 > If PowerShell reports that `npm.ps1` is not digitally signed, use `npm.cmd run dev` instead, or run
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
@@ -180,6 +192,7 @@ Variables:
 - `CLIENT_PORT`: the dev/preview server port. The server's `Cors:AllowedOrigins` for that environment must include it.
 - `API_PROXY_TARGET`: the API that `/api` is forwarded to, which is the matching server launch profile.
 - `VITE_ENV_LABEL`: the badge text.
+- `VITE_PUBLIC_URL` (optional): the address other devices use to reach the app, encoded in the sign-in QR code. Empty means the address in the browser's bar. See "Open it on your phone".
 - `VITE_API_BASE_URL`: the base URL the browser calls. Keep `/api/v1` when the client and API share an origin (or go through the proxy). Use an absolute URL when they're deployed on different domains.
 - `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` / `VITE_OTEL_EXPORTER_OTLP_HEADERS` (optional): browser telemetry outside Aspire. Under Aspire these come from `OTEL_*`.
 

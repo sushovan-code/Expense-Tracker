@@ -4,6 +4,7 @@ import { Field } from '@/shared/ui/Field'
 import { AlertTriangleIcon, InfoIcon, LockIcon, WalletIcon } from '@/shared/ui/Icons'
 import { PasswordInput } from '@/shared/ui/PasswordInput'
 import { LoadingState } from '@/shared/ui/States'
+import { SignInQrButton } from '../components/SignInQrButton'
 import { useLoginViewModel } from '../viewModels/useLoginViewModel'
 
 /** Accounts seeded by the API in Development (configs/appsettings.Development.json). */
@@ -74,6 +75,8 @@ export function LoginPage() {
             <LockIcon size={16} /> {vm.submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <SignInQrButton />
 
         {import.meta.env.DEV && (
           <div className="demo-accounts">

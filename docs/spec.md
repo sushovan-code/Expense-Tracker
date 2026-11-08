@@ -24,6 +24,7 @@ A family records what it spends, sees where the money goes and stays within mont
 - **Account**: change password, manage personal API keys.
 - **Administration** (Admin or above): users, role assignment, direct permission claims, role permissions, unlock, sign out everywhere.
 - **Themes**: Light, Dark and System.
+- **Open on your phone**: a QR code on the login page opens the sign-in page on another device; sign-in itself is unchanged.
 
 ## Rules
 - An expense has a description (1–200 characters), an amount from 0.01 to 999,999,999 with at most 2 decimal places, a date, a category and optional notes (up to 1,000 characters).
@@ -33,7 +34,6 @@ A family records what it spends, sees where the money goes and stays within mont
 ## Planned
 See `roadmap.md`:
 - family groups with invites and private expenses
-- a QR code on the login page
 - budget alerts at 75%, 90% and 100%
 - income and savings goals
 - recurring expenses
