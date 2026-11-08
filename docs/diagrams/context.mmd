@@ -1,0 +1,20 @@
+%% System context. Claude rewrites this from the code via /update-diagrams.
+%% Accent (#2563EB) marks this system; grey is everything else.
+flowchart LR
+  classDef ours fill:#DBEAFE,stroke:#2563EB,color:#0F172A
+  classDef ext fill:#F1F5F9,stroke:#94A3B8,color:#334155,stroke-dasharray:4 3
+
+  member([Family member<br/><small>SuperAdmin, Admin, User or Reader</small>])
+  script([Script or tool<br/><small>personal API key</small>])
+  system[Expense Tracker<br/><small>expenses, categories, budgets,<br/>live updates, administration</small>]:::ours
+  dashboard[Aspire dashboard<br/><small>logs, traces, metrics<br/>development only</small>]:::ext
+
+  member -->|browser, HTTPS| system
+  script -->|REST + x-api-key| system
+  system -. OpenTelemetry OTLP .-> dashboard
+
+  subgraph Legend
+    direction LR
+    l1[This system]:::ours
+    l2[External]:::ext
+  end

@@ -1,6 +1,6 @@
 # Expense Tracker
 
-A full-stack expense tracker built with React, TypeScript and Vite on the frontend, a .NET 10 minimal API on the backend, and SQL Server with EF Core for storage. It supports light, dark and system themes.
+A full-stack expense tracker built with React, TypeScript and Vite on the frontend, a .NET 10 minimal API on the backend, and SQLite with EF Core for storage (MongoDB Atlas is planned; see ADR 0001). It supports light, dark and system themes.
 
 ## Features
 
@@ -22,7 +22,7 @@ A full-stack expense tracker built with React, TypeScript and Vite on the fronte
 
 - .NET 10 SDK
 - Node.js 20+
-- SQL Server LocalDB, which comes with Visual Studio. You can also use any SQL Server instance by changing the connection string.
+- No database install is needed: the API uses a SQLite file that it creates on first run.
 
 ## Running locally
 
@@ -57,7 +57,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5010. The Vite dev server proxies `/api` requests to the API on port 7010. In Development, the API applies EF Core migrations on startup, which creates the `ExpenseTracker` database and seeds the default categories.
+Then open http://localhost:5010. The Vite dev server proxies `/api` requests to the API on port 7010. In Development, the API applies EF Core migrations on startup, which creates the SQLite database at `src/ExpenseTracker.Api/App_Data/expense-tracker.db` and seeds the default categories. To start again from an empty database, stop the API and delete the `App_Data` folder.
 
 > If PowerShell reports that `npm.ps1` is not digitally signed, use `npm.cmd run dev` instead, or run
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
@@ -152,15 +152,15 @@ Ports follow one scheme: the client is `50x0` and the API is `70x0`, where x is 
 | File | Purpose |
 | --- | --- |
 | `appsettings.json` | Shared defaults (required). Safe values: no connection string, docs off, auto-migrate off. |
-| `appsettings.Development.json` | LocalDB connection, CORS for `:5010`, Scalar on, auto-migrate on, EF SQL command logs muted (SQL appears in traces instead). |
-| `appsettings.Staging.json` | Staging DB, CORS for `:5020` and the staging domain, Scalar on. |
+| `appsettings.Development.json` | SQLite file `App_Data/expense-tracker.db`, CORS for `:5010`, Scalar on, auto-migrate on, EF SQL command logs muted (SQL appears in traces instead). |
+| `appsettings.Staging.json` | SQLite file `App_Data/expense-tracker.staging.db`, CORS for `:5020` and the staging domain, Scalar on. |
 | `appsettings.Production.json` | No connection string in source control, docs off, CORS for the production domain, quieter logging. |
 
 `UseConfigsFolder()` (`Common/ConfigurationExtensions.cs`) points ASP.NET Core's standard appsettings sources at this folder without changing precedence. Later sources still win: user secrets (Development), then environment variables (for example `ConnectionStrings__DefaultConnection`), then command-line arguments. The environment comes from `ASPNETCORE_ENVIRONMENT`, which each launch profile sets.
 
 Settings:
 
-- `ConnectionStrings:DefaultConnection`: if this is missing, startup fails with a message naming the file or environment variable to set.
+- `ConnectionStrings:DefaultConnection`: a SQLite connection string such as `Data Source=App_Data/expense-tracker.db`. A relative path is resolved against the API project folder, and the folder is created if needed. If this is missing, startup fails with a message naming the file or environment variable to set.
 - `Cors:AllowedOrigins`: browser origins allowed to call the API directly.
 - `Features:ApiDocs`: serves `/openapi/v1.json` and `/scalar`.
 - `Features:MigrateDatabaseOnStartup`: applies EF Core migrations when the app starts.
@@ -237,6 +237,18 @@ There are sample requests in `src/ExpenseTracker.Api/ExpenseTracker.Api.http`.
 
 ## Architecture
 
+![Containers: React SPA, .NET API with SignalR, in-memory HybridCache and a SQLite file](docs/diagrams/containers.svg)
+
+| Diagram | Shows |
+| --- | --- |
+| [Context](docs/diagrams/context.svg) | Who uses the system (family members, API-key scripts) and what it talks to (the Aspire dashboard in development). |
+| [Containers](docs/diagrams/containers.svg) | The SPA, the API with its SignalR hub and Identity, the in-memory cache and the SQLite database. |
+| [Sign-in](docs/diagrams/sequence-login.svg) | Login, the in-memory access token, and the rotating refresh cookie. |
+| [Add an expense](docs/diagrams/sequence-add-expense.svg) | Validation, saving, the budget check, and live updates and alerts over SignalR. |
+| [Azure deployment](docs/diagrams/deployment-azure.png) | **Placeholder** until the Stage 2 Terraform exists; shows the intended shape only. |
+
+Sources are in [docs/diagrams/](docs/diagrams/README.md); re-render them with `pwsh -File scripts/render-diagrams.ps1`.
+
 See **[docs/architecture.md](docs/architecture.md)** for the full picture. In short:
 
 - **Backend: Clean Architecture.** `Domain` (entities + rules, no dependencies) ← `Application` (use cases + ports) ← `Infrastructure` (EF Core adapters) ← `Api` (minimal APIs, SignalR, composition root).
@@ -262,7 +274,7 @@ cd src\web\expense-tracker-web
 npm test          # or: npm run check  (type-check + lint + tests)
 ```
 
-The API integration tests host the real API in memory against a **throwaway LocalDB database** (`ExpenseTracker_IntegrationTests_<guid>`), which is created by migrations and dropped at the end. Your development database is never touched.
+The API integration tests host the real API in memory against a **throwaway SQLite file** per test class (`%TEMP%/expense-tracker-tests-<guid>.db`), which is created by migrations and deleted at the end. No Docker or database install is needed, so CI runs them on Linux. Your development database is never touched.
 
 ## Repository layout
 
