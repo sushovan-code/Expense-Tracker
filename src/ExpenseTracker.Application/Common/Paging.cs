@@ -2,21 +2,6 @@ using ExpenseTracker.Domain.Common;
 
 namespace ExpenseTracker.Application.Common;
 
-/// <summary>One page of results plus what a grid needs to render its pager.</summary>
-public record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount)
-{
-    public int TotalPages => TotalCount == 0 ? 0 : (int)Math.Ceiling(TotalCount / (double)PageSize);
-}
-
-/// <summary>Requested page; normalised by <see cref="Paging.Resolve"/>.</summary>
-public readonly record struct PageRequest(int? Page, int? PageSize);
-
-/// <summary>A validated, allow-listed sort.</summary>
-public readonly record struct SortSpec(string Field, bool Descending)
-{
-    public string Direction => Descending ? "desc" : "asc";
-}
-
 public static class Paging
 {
     public const int DefaultPageSize = 20;
