@@ -74,8 +74,8 @@ Every API endpoint requires authentication (except sign-in, health and, in Devel
 | `reader@expensetracker.local` | `Password123` | Reader | Read and export only |
 
 - **Browser:** sign in at `/login`; sign out from the avatar menu (`/logout`). Manage your password and API keys at `/account`, and users, roles and claims at `/admin` (Admin or above).
-- **Scripts:** create a personal API key on the account page (or `POST /api/auth/api-keys`) and send it as `x-api-key`. Keys expire and can be limited to specific permissions.
-- **Scalar/OpenAPI:** call `POST /api/auth/login`, then paste the `accessToken` into the Bearer auth.
+- **Scripts:** create a personal API key on the account page (or `POST /api/v1/auth/api-keys`) and send it as `x-api-key`. Keys expire and can be limited to specific permissions.
+- **Scalar/OpenAPI:** call `POST /api/v1/auth/login`, then paste the `accessToken` into the Bearer auth.
 
 Outside Development, set these through environment variables or a secret store (never committed files): `Authentication__Jwt__SigningKey` (32+ characters, required to start), and `Identity__Seed__AdminEmail` / `Identity__Seed__AdminPassword` to bootstrap the first SuperAdmin. See [docs/architecture.md](docs/architecture.md#security-authentication--rbac) for the design.
 
@@ -171,7 +171,7 @@ The local `production` launch profile supplies its connection string through an 
 
 | File | Purpose |
 | --- | --- |
-| `.env` | Shared by all modes (`VITE_API_BASE_URL=/api`). |
+| `.env` | Shared by all modes (`VITE_API_BASE_URL=/api/v1`). |
 | `.env.development` / `.env.staging` / `.env.production` | Per-mode settings (see below). |
 | `.env.local`, `.env.<mode>.local` | Your machine-only overrides (git-ignored). |
 
@@ -180,7 +180,7 @@ Variables:
 - `CLIENT_PORT`: the dev/preview server port. The server's `Cors:AllowedOrigins` for that environment must include it.
 - `API_PROXY_TARGET`: the API that `/api` is forwarded to, which is the matching server launch profile.
 - `VITE_ENV_LABEL`: the badge text.
-- `VITE_API_BASE_URL`: the base URL the browser calls. Keep `/api` when the client and API share an origin (or go through the proxy). Use an absolute URL when they're deployed on different domains.
+- `VITE_API_BASE_URL`: the base URL the browser calls. Keep `/api/v1` when the client and API share an origin (or go through the proxy). Use an absolute URL when they're deployed on different domains.
 - `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` / `VITE_OTEL_EXPORTER_OTLP_HEADERS` (optional): browser telemetry outside Aspire. Under Aspire these come from `OTEL_*`.
 
 Only `VITE_*` variables reach the browser bundle. `CLIENT_PORT` and `API_PROXY_TARGET` are read by `vite.config.ts` only. Real environment variables override the files; that's how Aspire sets `API_PROXY_TARGET` and the OTLP settings. Staging builds go to `dist-staging/`, production builds to `dist/`.
@@ -203,19 +203,21 @@ dotnet ef database update --project src/ExpenseTracker.Infrastructure --startup-
 
 ## API
 
+Every REST route is versioned under `/api/v1` (`Endpoints/ApiRoutes.cs`, ADR 0006). The SignalR hub (`/hubs/expenses`) and the health checks are not versioned.
+
 | Method | Route | Notes |
 | --- | --- | --- |
-| GET | `/api/expenses` | **Paged.** Query: `from`, `to` (YYYY-MM-DD), `categoryId`, `search`, `page`, `pageSize` (≤ 100), `sortBy` (`date`, `amount`, `description`, `category`, `createdAt`), `sortDir`. Returns `items`, `page`, `pageSize`, `totalCount`, `totalPages` and `totalAmount` |
-| GET | `/api/expenses/export` | CSV with the same filters and sort, up to 10,000 rows (formula-injection safe, UTF-8 BOM) |
-| GET | `/api/expenses/summary` | Query: `from`, `to`. Returns totals by category and by month |
-| POST | `/api/expenses/bulk-delete` | Body: `{ "ids": [..] }` (max 500). Returns `deleted` and `deletedIds` |
-| GET/PUT/DELETE | `/api/expenses/{id}` | |
-| POST | `/api/expenses` | |
-| GET | `/api/categories` | **Paged.** Query: `search`, `page`, `pageSize`, `sortBy` (`name`, `expenses`, `budget`), `sortDir` |
-| GET | `/api/categories/lookup` | Every category (`id`, `name`, `color`) for dropdowns |
-| POST | `/api/categories` | Body includes the optional `monthlyBudget` |
-| PUT/DELETE | `/api/categories/{id}` | DELETE returns 409 if the category has expenses |
-| GET | `/api/budgets` | Query: `year`, `month` (default: current month). Budget status per category |
+| GET | `/api/v1/expenses` | **Paged.** Query: `from`, `to` (YYYY-MM-DD), `categoryId`, `search`, `page`, `pageSize` (≤ 100), `sortBy` (`date`, `amount`, `description`, `category`, `createdAt`), `sortDir`. Returns `items`, `page`, `pageSize`, `totalCount`, `totalPages` and `totalAmount` |
+| GET | `/api/v1/expenses/export` | CSV with the same filters and sort, up to 10,000 rows (formula-injection safe, UTF-8 BOM) |
+| GET | `/api/v1/expenses/summary` | Query: `from`, `to`. Returns totals by category and by month |
+| POST | `/api/v1/expenses/bulk-delete` | Body: `{ "ids": [..] }` (max 500). Returns `deleted` and `deletedIds` |
+| GET/PUT/DELETE | `/api/v1/expenses/{id}` | |
+| POST | `/api/v1/expenses` | |
+| GET | `/api/v1/categories` | **Paged.** Query: `search`, `page`, `pageSize`, `sortBy` (`name`, `expenses`, `budget`), `sortDir` |
+| GET | `/api/v1/categories/lookup` | Every category (`id`, `name`, `color`) for dropdowns |
+| POST | `/api/v1/categories` | Body includes the optional `monthlyBudget` |
+| PUT/DELETE | `/api/v1/categories/{id}` | DELETE returns 409 if the category has expenses |
+| GET | `/api/v1/budgets` | Query: `year`, `month` (default: current month). Budget status per category |
 | WS | `/hubs/expenses` | SignalR hub (see below) |
 
 Unknown sort fields, invalid ranges and out-of-range page sizes return `400` validation problems. A page past the end is clamped to the last page.

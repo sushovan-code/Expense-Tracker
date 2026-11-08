@@ -7,13 +7,13 @@ sequenceDiagram
   participant D as SQLite
 
   U->>W: email and password
-  W->>A: POST /api/auth/login
+  W->>A: POST /api/v1/auth/login
   A->>D: check password, lockout, active
   A->>D: store hashed refresh token
   A-->>W: 15-minute JWT, plus HttpOnly refresh cookie (7 days)
   Note over W: access token kept in memory only
   W->>A: API calls with Authorization: Bearer
   Note over W,A: before expiry or on a 401 (single-flight across tabs)
-  W->>A: POST /api/auth/refresh with the cookie
+  W->>A: POST /api/v1/auth/refresh with the cookie
   A->>D: rotate the token (replaying an old one revokes the session)
   A-->>W: new JWT and new cookie
