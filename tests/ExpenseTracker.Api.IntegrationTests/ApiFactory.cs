@@ -9,8 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ExpenseTracker.Api.IntegrationTests;
 
 /// <summary>
-/// Hosts the real API (all layers) in memory against its own LocalDB database, which is created by the
-/// app's migrations on startup and dropped when the test run ends. Never touches the development database.
+/// Hosts the real API (all layers) in memory against its own SQLite database file in the temp folder, which is
+/// created by the app's migrations on startup and deleted when the factory is disposed. Never touches the development database.
 /// Seeds a SuperAdmin plus one demo user per lower role, all signing in over HTTPS like a real client.
 /// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>
@@ -22,9 +22,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string ReaderEmail = "reader@tests.local";
     public const string DemoPassword = "Password123";
 
+    /// <summary>The seeded "Food" category (fixed ID in CategoryConfiguration).</summary>
+    public static readonly Guid SeededFoodCategoryId = Guid.Parse("0192f0a0-0000-7000-8000-000000000001");
+
     private readonly string _connectionString =
-        $"Server=(localdb)\\MSSQLLocalDB;Database=ExpenseTracker_IntegrationTests_{Guid.NewGuid():N};" +
-        "Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+        $"Data Source={Path.Combine(Path.GetTempPath(), $"expense-tracker-tests-{Guid.NewGuid():N}.db")}";
 
     private readonly ConcurrentDictionary<string, string> _accessTokens = new();
 

@@ -33,7 +33,7 @@ internal sealed class ExpenseQueries(AppDbContext dbContext) : IExpenseQueries
     public async Task<IReadOnlyList<ExpenseDto>> ListAllAsync(ExpenseFilter filter, SortSpec sort, int maxRows, CancellationToken cancellationToken) =>
         await Sort(Filter(filter), sort).Take(maxRows).Select(ToDto).ToListAsync(cancellationToken);
 
-    public Task<ExpenseDto?> GetAsync(int id, CancellationToken cancellationToken) =>
+    public Task<ExpenseDto?> GetAsync(Guid id, CancellationToken cancellationToken) =>
         dbContext.Expenses.AsNoTracking().Where(e => e.Id == id).Select(ToDto).FirstOrDefaultAsync(cancellationToken);
 
     public async Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
@@ -69,8 +69,9 @@ internal sealed class ExpenseQueries(AppDbContext dbContext) : IExpenseQueries
         if (f.CategoryId is not null) query = query.Where(e => e.CategoryId == f.CategoryId);
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
-            var term = f.Search.Trim();
-            query = query.Where(e => e.Description.Contains(term) || (e.Notes != null && e.Notes.Contains(term)));
+            var pattern = LikePatterns.Contains(f.Search.Trim());
+            query = query.Where(e => EF.Functions.Like(e.Description, pattern, LikePatterns.EscapeCharacter)
+                || (e.Notes != null && EF.Functions.Like(e.Notes, pattern, LikePatterns.EscapeCharacter)));
         }
         return query;
     }

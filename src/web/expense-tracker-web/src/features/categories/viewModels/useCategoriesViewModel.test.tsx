@@ -6,7 +6,7 @@ import { CategoriesApiToken, type CategoriesApi } from '../api/categoriesApi'
 import type { Category } from '../model/types'
 import { useCategoriesViewModel } from './useCategoriesViewModel'
 
-const food: Category = { id: 1, name: 'Food', color: '#f97316', monthlyBudget: null, expenseCount: 2 }
+const food: Category = { id: 'cat-food', name: 'Food', color: '#f97316', monthlyBudget: null, expenseCount: 2 }
 
 /** Fake service injected through DI — no HTTP mocking needed. */
 function fakeApi(overrides: Partial<CategoriesApi> = {}): CategoriesApi {
@@ -50,7 +50,7 @@ describe('useCategoriesViewModel', () => {
 
     await act(() => result.current.grid.onSaveRow(food, { name: 'Groceries', color: '#f97316', monthlyBudget: 5000 }))
 
-    expect(api.update).toHaveBeenCalledWith(1, { name: 'Groceries', color: '#f97316', monthlyBudget: 5000 })
+    expect(api.update).toHaveBeenCalledWith('cat-food', { name: 'Groceries', color: '#f97316', monthlyBudget: 5000 })
   })
 
   it('asks for confirmation before deleting, and handles "still in use" gracefully', async () => {
@@ -63,6 +63,6 @@ describe('useCategoriesViewModel', () => {
     expect(api.remove).not.toHaveBeenCalled()
 
     await act(() => result.current.deleteDialog.confirm())
-    expect(api.remove).toHaveBeenCalledWith(1)
+    expect(api.remove).toHaveBeenCalledWith('cat-food')
   })
 })

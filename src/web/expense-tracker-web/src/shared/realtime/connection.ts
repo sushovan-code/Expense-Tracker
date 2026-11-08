@@ -15,12 +15,12 @@ export type ChangeAction = 'created' | 'updated' | 'deleted'
 
 export interface ChangeNotice {
   action: ChangeAction
-  ids: number[]
+  ids: string[]
   originClientId: string | null
 }
 
 export interface BudgetAlert {
-  categoryId: number
+  categoryId: string
   categoryName: string
   budget: number
   spent: number

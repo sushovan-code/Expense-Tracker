@@ -21,3 +21,8 @@ Thumbs.db
 # Test output
 TestResults/
 coverage/
+
+# Local SQLite databases
+**/App_Data/
+*.db-shm
+*.db-wal

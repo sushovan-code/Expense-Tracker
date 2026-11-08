@@ -1,6 +1,6 @@
 import { toExpenseInput, validateExpense, type ExpenseDraft } from './validation'
 
-const valid: ExpenseDraft = { description: 'Groceries', amount: '250.50', date: '2026-10-05', categoryId: 1, notes: '' }
+const valid: ExpenseDraft = { description: 'Groceries', amount: '250.50', date: '2026-10-05', categoryId: 'cat-food', notes: '' }
 
 describe('validateExpense', () => {
   it('accepts a complete draft', () => {
@@ -14,7 +14,7 @@ describe('validateExpense', () => {
     [{ amount: '-3' }, 'amount'],
     [{ amount: '10.005' }, 'amount'],
     [{ date: '' }, 'date'],
-    [{ categoryId: 0 }, 'categoryId'],
+    [{ categoryId: '' }, 'categoryId'],
     [{ notes: 'x'.repeat(1001) }, 'notes'],
   ])('flags %o on %s', (patch, field) => {
     expect(validateExpense({ ...valid, ...patch })).toHaveProperty(field)
@@ -27,7 +27,7 @@ describe('toExpenseInput', () => {
       description: 'Groceries',
       amount: 250.5,
       date: '2026-10-05',
-      categoryId: 1,
+      categoryId: 'cat-food',
       notes: null,
     })
   })

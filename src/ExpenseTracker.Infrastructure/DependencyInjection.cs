@@ -9,7 +9,6 @@ using ExpenseTracker.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenTelemetry.Trace;
 
 namespace ExpenseTracker.Infrastructure;
 
@@ -20,9 +19,13 @@ public static class DependencyInjection
     private static readonly TimeSpan MinRefreshTokenLifetime = TimeSpan.FromHours(1);
     private static readonly TimeSpan MaxRefreshTokenLifetime = TimeSpan.FromDays(90);
 
-    /// <summary>Registers SQL Server persistence and the read-side queries behind the Application ports.</summary>
+    /// <summary>Registers SQLite persistence and the read-side queries behind the Application ports.</summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Reads <c>ConnectionStrings:DefaultConnection</c> and the <c>Identity</c> section.</param>
     /// <param name="environmentName">Used only to make a missing-configuration error actionable.</param>
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, string environmentName)
+    /// <param name="contentRootPath">A relative SQLite <c>Data Source</c> is resolved against this folder.</param>
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration configuration, string environmentName, string contentRootPath)
     {
         var connectionString = configuration.GetConnectionString(ConnectionStringName);
         if (string.IsNullOrWhiteSpace(connectionString))
@@ -33,9 +36,8 @@ public static class DependencyInjection
                 $"or the ConnectionStrings__{ConnectionStringName} environment variable.");
         }
 
-        // Retries transient faults (e.g. LocalDB/Azure SQL waking up) instead of failing the first request.
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+        var sqliteConnectionString = SqliteConnectionStrings.ResolveDataSource(connectionString, contentRootPath);
+        services.AddDbContext<AppDbContext>(options => options.UseSqlite(sqliteConnectionString));
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
@@ -48,9 +50,6 @@ public static class DependencyInjection
         services.AddIdentityStore(configuration);
 
         services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
-
-        // SQL commands appear as child spans of the request in traces.
-        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddSqlClientInstrumentation());
 
         return services;
     }

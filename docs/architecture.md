@@ -6,7 +6,7 @@ Expense Tracker is split into independent layers on both sides. Each layer depen
 ┌──────────────────────────── Browser ────────────────────────────┐      ┌──────────────────────────── Server ─────────────────────────────┐
 │  app/        composition root: providers, DI wiring, routes     │      │  ExpenseTracker.Api            presentation + composition root  │
 │     ↓                                                           │ HTTP │     ↓                     ↓                                     │
-│  features/   expenses · categories · budgets · dashboard        │ ───▶ │  ExpenseTracker.Infrastructure  EF Core, SQL Server, queries     │
+│  features/   expenses · categories · budgets · dashboard        │ ───▶ │  ExpenseTracker.Infrastructure  EF Core, SQLite, queries         │
 │     ↓        (View ← ViewModel hook ← API service + Query)      │  WS  │     ↓                                                           │
 │  shared/     http client, DI, UI kit, realtime, telemetry       │ ◀─── │  ExpenseTracker.Application    use cases + ports (interfaces)    │
 └─────────────────────────────────────────────────────────────────┘      │     ↓                                                           │
@@ -18,7 +18,7 @@ Expense Tracker is split into independent layers on both sides. Each layer depen
 
 | Project | Responsibility | May depend on |
 | --- | --- | --- |
-| `ExpenseTracker.Domain` | Entities (`Expense`, `Category`) with private setters and factory methods that enforce invariants; error catalogs; `BudgetPolicy`; `Result`/`Error`. | Nothing; plain .NET only |
+| `ExpenseTracker.Domain` | Entities (`Expense`, `Category`) with app-generated GUID v7 IDs, private setters and factory methods that enforce invariants; error catalogs; `BudgetPolicy`; `Result`/`Error`. | Nothing; plain .NET only |
 | `ExpenseTracker.Application` | Use cases (`IExpenseService`, `ICategoryService`, `IBudgetService`) and the **ports** they need: repositories, unit of work, read-side queries, `IChangeNotifier`. DTOs, paging/sorting rules, log event ids. | Domain, plus logging/DI abstractions |
 | `ExpenseTracker.Infrastructure` | **Adapters** for the persistence and query ports: EF Core `AppDbContext` (also the unit of work), entity configurations, migrations, repositories, SQL projections, the database health check, SqlClient tracing. | Application, Domain |
 | `ExpenseTracker.Api` | Minimal API endpoints, HTTP contracts (validated request records mapped to commands), problem details, middleware, the SignalR hub and its `IChangeNotifier` adapter, configuration. **Composition root.** | All of the above |
@@ -40,7 +40,7 @@ Expense Tracker is split into independent layers on both sides. Each layer depen
 | `ExpenseTracker.ArchitectureTests` | The dependency rule (Domain → nothing; Application ↛ EF Core or ASP.NET Core; Infrastructure ↛ Api), that use cases and adapters are internal, and that entities have no public setters. |
 | `ExpenseTracker.Domain.Tests` | Entity invariants and the budget policy. |
 | `ExpenseTracker.Application.Tests` | Use cases in isolation, with NSubstitute fakes for every port. |
-| `ExpenseTracker.Api.IntegrationTests` | The real API in memory (WebApplicationFactory) against a throwaway LocalDB database that is created by migrations and dropped afterwards. |
+| `ExpenseTracker.Api.IntegrationTests` | The real API in memory (WebApplicationFactory) against a throwaway SQLite file per test class that is created by migrations and deleted afterwards. |
 
 ## Security: authentication & RBAC
 

@@ -8,7 +8,7 @@ internal sealed class UserClaimConfiguration : IEntityTypeConfiguration<Identity
 {
     public void Configure(EntityTypeBuilder<IdentityUserClaim<Guid>> builder)
     {
-        builder.ToTable("UserClaims", AuthSchema.Name);
+        builder.ToTable("UserClaims");
         builder.Property(c => c.ClaimType).HasMaxLength(256);
         builder.Property(c => c.ClaimValue).HasMaxLength(1024);
     }

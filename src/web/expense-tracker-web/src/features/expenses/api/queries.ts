@@ -43,11 +43,11 @@ export function useExpenseMutations() {
   return {
     create: useMutation({ mutationFn: (input: ExpenseInput) => api.create(input), onSuccess: invalidate }),
     update: useMutation({
-      mutationFn: ({ id, input }: { id: number; input: ExpenseInput }) => api.update(id, input),
+      mutationFn: ({ id, input }: { id: string; input: ExpenseInput }) => api.update(id, input),
       onSuccess: invalidate,
     }),
-    remove: useMutation({ mutationFn: (id: number) => api.remove(id), onSuccess: invalidate }),
-    bulkRemove: useMutation({ mutationFn: (ids: number[]) => api.bulkRemove(ids), onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: (id: string) => api.remove(id), onSuccess: invalidate }),
+    bulkRemove: useMutation({ mutationFn: (ids: string[]) => api.bulkRemove(ids), onSuccess: invalidate }),
     exportCsv: useMutation({ mutationFn: api.exportCsv }),
   }
 }

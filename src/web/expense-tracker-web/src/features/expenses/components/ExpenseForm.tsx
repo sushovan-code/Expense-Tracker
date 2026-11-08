@@ -18,7 +18,7 @@ export function ExpenseForm({ expense, categories, onSubmit, onCancel }: Expense
   const [description, setDescription] = useState(expense?.description ?? '')
   const [amount, setAmount] = useState(expense ? String(expense.amount) : '')
   const [date, setDate] = useState(expense?.date ?? today())
-  const [categoryId, setCategoryId] = useState(expense?.categoryId ?? categories[0]?.id ?? 0)
+  const [categoryId, setCategoryId] = useState(expense?.categoryId ?? categories[0]?.id ?? '')
   const [notes, setNotes] = useState(expense?.notes ?? '')
   const [errors, setErrors] = useState<ExpenseErrors>({})
   const [saving, setSaving] = useState(false)
@@ -98,7 +98,7 @@ export function ExpenseForm({ expense, categories, onSubmit, onCancel }: Expense
           id="expense-category"
           className="input"
           value={categoryId}
-          onChange={(e) => setCategoryId(Number(e.target.value))}
+          onChange={(e) => setCategoryId(e.target.value)}
         >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>

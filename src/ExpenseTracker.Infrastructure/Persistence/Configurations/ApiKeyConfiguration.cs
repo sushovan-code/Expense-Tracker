@@ -8,7 +8,7 @@ internal sealed class ApiKeyConfiguration : IEntityTypeConfiguration<ApiKey>
 {
     public void Configure(EntityTypeBuilder<ApiKey> builder)
     {
-        builder.ToTable("ApiKeys", AuthSchema.Name);
+        builder.ToTable("ApiKeys");
         builder.Property(k => k.Id).ValueGeneratedNever();
         builder.Property(k => k.Name).HasMaxLength(100);
         builder.Property(k => k.Prefix).HasMaxLength(16);

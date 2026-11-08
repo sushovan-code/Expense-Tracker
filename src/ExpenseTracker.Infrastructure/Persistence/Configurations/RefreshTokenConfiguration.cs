@@ -8,7 +8,7 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
 {
     public void Configure(EntityTypeBuilder<RefreshToken> builder)
     {
-        builder.ToTable("RefreshTokens", AuthSchema.Name);
+        builder.ToTable("RefreshTokens");
         builder.Property(t => t.Id).ValueGeneratedNever();
         builder.Property(t => t.TokenHash).HasMaxLength(64);
         builder.Property(t => t.CreatedByIp).HasMaxLength(45);

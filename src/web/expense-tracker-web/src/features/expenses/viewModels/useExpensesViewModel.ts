@@ -56,13 +56,13 @@ export function useExpensesViewModel() {
   const [confirmingBulk, setConfirmingBulk] = useState(false)
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   // Rows seen while selected, so bulk Undo can re-create them even if they were on other pages.
-  const selectedRows = useRef(new Map<number, Expense>())
+  const selectedRows = useRef(new Map<string, Expense>())
 
   const filters = useMemo(
     () => ({
       from: url.from || undefined,
       to: url.to || undefined,
-      categoryId: url.category ? Number(url.category) : undefined,
+      categoryId: url.category || undefined,
       search: url.q.trim() || undefined,
     }),
     [url.from, url.to, url.category, url.q],
@@ -133,7 +133,7 @@ export function useExpensesViewModel() {
       return next
     })
   }
-  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]).map(Number)
+  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
 
   // ---- Commands ------------------------------------------------------------------------------
 

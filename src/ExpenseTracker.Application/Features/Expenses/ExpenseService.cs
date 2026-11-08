@@ -16,11 +16,11 @@ public interface IExpenseService
     Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken cancellationToken);
     Task<Result<IReadOnlyList<ExpenseDto>>> ExportAsync(ExpenseFilter filter, string? sortBy, string? sortDir, CancellationToken cancellationToken);
     Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken);
-    Task<Result<ExpenseDto>> GetAsync(int id, CancellationToken cancellationToken);
+    Task<Result<ExpenseDto>> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken cancellationToken);
-    Task<Result<ExpenseDto>> UpdateAsync(int id, ExpenseCommand command, CancellationToken cancellationToken);
-    Task<Result> DeleteAsync(int id, CancellationToken cancellationToken);
-    Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
+    Task<Result<ExpenseDto>> UpdateAsync(Guid id, ExpenseCommand command, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
+    Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
 }
 
 internal sealed partial class ExpenseService(
@@ -70,7 +70,7 @@ internal sealed partial class ExpenseService(
         return summary;
     }
 
-    public async Task<Result<ExpenseDto>> GetAsync(int id, CancellationToken cancellationToken)
+    public async Task<Result<ExpenseDto>> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var expense = await queries.GetAsync(id, cancellationToken);
         if (expense is not null) return expense;
@@ -98,7 +98,7 @@ internal sealed partial class ExpenseService(
         return ToDto(expense, category);
     }
 
-    public async Task<Result<ExpenseDto>> UpdateAsync(int id, ExpenseCommand command, CancellationToken cancellationToken)
+    public async Task<Result<ExpenseDto>> UpdateAsync(Guid id, ExpenseCommand command, CancellationToken cancellationToken)
     {
         var expense = await expenses.GetByIdAsync(id, cancellationToken);
         if (expense is null)
@@ -128,7 +128,7 @@ internal sealed partial class ExpenseService(
         return ToDto(expense, category);
     }
 
-    public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         if (!await expenses.DeleteAsync(id, cancellationToken))
         {
@@ -141,7 +141,7 @@ internal sealed partial class ExpenseService(
         return Result.Success();
     }
 
-    public async Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
+    public async Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         var requested = ids.Distinct().ToArray();
         var deleted = await expenses.DeleteManyAsync(requested, cancellationToken);
@@ -152,7 +152,7 @@ internal sealed partial class ExpenseService(
         return new BulkDeleteResult(deleted.Count, deleted);
     }
 
-    private async Task CheckBudgetAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken)
+    private async Task CheckBudgetAsync(Guid categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken)
     {
         if (await budgets.DetectOverrunAsync(categoryId, date, addedAmount, cancellationToken) is { } alert)
         {
@@ -172,23 +172,23 @@ internal sealed partial class ExpenseService(
     [LoggerMessage(EventId = LogEvents.ExpenseCreated, Level = LogLevel.Information,
         Message = "Created expense {ExpenseId}: {Amount} in category {CategoryId} '{CategoryName}' on {ExpenseDate}")]
     private static partial void LogExpenseCreated(
-        ILogger logger, int expenseId, decimal amount, int categoryId, string categoryName, DateOnly expenseDate);
+        ILogger logger, Guid expenseId, decimal amount, Guid categoryId, string categoryName, DateOnly expenseDate);
 
     [LoggerMessage(EventId = LogEvents.ExpenseUpdated, Level = LogLevel.Information,
         Message = "Updated expense {ExpenseId}: amount {PreviousAmount} → {Amount}, category {PreviousCategoryId} → {CategoryId}, date {PreviousDate} → {ExpenseDate}")]
     private static partial void LogExpenseUpdated(
-        ILogger logger, int expenseId, decimal previousAmount, decimal amount, int previousCategoryId, int categoryId,
+        ILogger logger, Guid expenseId, decimal previousAmount, decimal amount, Guid previousCategoryId, Guid categoryId,
         DateOnly previousDate, DateOnly expenseDate);
 
     [LoggerMessage(EventId = LogEvents.ExpenseDeleted, Level = LogLevel.Information, Message = "Deleted expense {ExpenseId}")]
-    private static partial void LogExpenseDeleted(ILogger logger, int expenseId);
+    private static partial void LogExpenseDeleted(ILogger logger, Guid expenseId);
 
     [LoggerMessage(EventId = LogEvents.ExpensesBulkDeleted, Level = LogLevel.Information,
         Message = "Bulk-deleted {DeletedCount} of {RequestedCount} expenses ({MissingCount} already gone)")]
     private static partial void LogExpensesBulkDeleted(ILogger logger, int deletedCount, int requestedCount, int missingCount);
 
     [LoggerMessage(EventId = LogEvents.ExpenseNotFound, Level = LogLevel.Warning, Message = "Expense {ExpenseId} was not found")]
-    private static partial void LogExpenseNotFound(ILogger logger, int expenseId);
+    private static partial void LogExpenseNotFound(ILogger logger, Guid expenseId);
 
     [LoggerMessage(EventId = LogEvents.ExpensesListed, Level = LogLevel.Debug,
         Message = "Listed {ItemCount} of {TotalCount} expenses (page {Page}, size {PageSize}, sort {SortBy} {SortDir}, filtered {Filtered}) in {ElapsedMs:0.0} ms")]

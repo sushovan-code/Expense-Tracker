@@ -28,7 +28,7 @@ public class LayeringTests
     public void Application_does_not_depend_on_infrastructure_or_presentation()
     {
         AssertNoDependencies(Application, InfrastructureNs, ApiNs,
-            "Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Microsoft.Data.SqlClient");
+            "Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Microsoft.Data.Sqlite");
     }
 
     [Fact]

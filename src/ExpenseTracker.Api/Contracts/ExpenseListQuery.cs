@@ -8,7 +8,7 @@ namespace ExpenseTracker.Api.Contracts;
 public sealed record ExpenseListQuery(
     [property: Description("Only include expenses on or after this date.")] DateOnly? From,
     [property: Description("Only include expenses on or before this date.")] DateOnly? To,
-    [property: Description("Only include expenses in this category.")] int? CategoryId,
+    [property: Description("Only include expenses in this category.")] Guid? CategoryId,
     [property: Description("Case-insensitive match on description or notes.")] string? Search,
     [property: Range(1, int.MaxValue), Description("1-based page number (default 1).")] int? Page,
     [property: Range(1, Paging.MaxPageSize), Description("Items per page, 1–100 (default 20).")] int? PageSize,

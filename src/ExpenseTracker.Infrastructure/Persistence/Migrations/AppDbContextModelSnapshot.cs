@@ -3,7 +3,6 @@ using System;
 using ExpenseTracker.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -16,33 +15,27 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("ExpenseTracker.Domain.Categories.Category", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Color")
                         .IsRequired()
                         .HasMaxLength(7)
-                        .HasColumnType("nvarchar(7)");
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal?>("MonthlyBudget")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.HasKey("Id");
 
@@ -54,49 +47,49 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                     b.HasData(
                         new
                         {
-                            Id = 1,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000001"),
                             Color = "#f97316",
                             Name = "Food"
                         },
                         new
                         {
-                            Id = 2,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000002"),
                             Color = "#3b82f6",
                             Name = "Transport"
                         },
                         new
                         {
-                            Id = 3,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000003"),
                             Color = "#8b5cf6",
                             Name = "Housing"
                         },
                         new
                         {
-                            Id = 4,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000004"),
                             Color = "#06b6d4",
                             Name = "Utilities"
                         },
                         new
                         {
-                            Id = 5,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000005"),
                             Color = "#ec4899",
                             Name = "Entertainment"
                         },
                         new
                         {
-                            Id = 6,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000006"),
                             Color = "#22c55e",
                             Name = "Health"
                         },
                         new
                         {
-                            Id = 7,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000007"),
                             Color = "#eab308",
                             Name = "Shopping"
                         },
                         new
                         {
-                            Id = 8,
+                            Id = new Guid("0192f0a0-0000-7000-8000-000000000008"),
                             Color = "#64748b",
                             Name = "Other"
                         });
@@ -104,33 +97,32 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ExpenseTracker.Domain.Expenses.Expense", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("TEXT");
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.HasKey("Id");
 
@@ -144,42 +136,42 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("KeyHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset?>("LastUsedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long?>("LastUsedAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Prefix")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long?>("RevokedAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Scopes")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -188,110 +180,111 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ApiKeys", "auth");
+                    b.ToTable("ApiKeys", (string)null);
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.AppRole", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
+                        .HasDatabaseName("RoleNameIndex");
 
-                    b.ToTable("Roles", "auth");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.AppUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
-                    b.Property<DateTimeOffset?>("LastLoginAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long?>("LastLoginAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long?>("LockoutEnd")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -300,43 +293,42 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("Users", "auth");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("CreatedByIp")
                         .HasMaxLength(45)
-                        .HasColumnType("nvarchar(45)");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("ReplacedById")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("datetimeoffset");
+                    b.Property<long?>("RevokedAt")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("SessionId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -347,114 +339,110 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "ExpiresAt");
 
-                    b.ToTable("RefreshTokens", "auth");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimType")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimValue")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("RoleClaims", "auth");
+                    b.ToTable("RoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimType")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimValue")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserClaims", "auth");
+                    b.ToTable("UserClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserLogins", "auth");
+                    b.ToTable("UserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RoleId");
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("UserRoles", "auth");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("UserTokens", "auth");
+                    b.ToTable("UserTokens", (string)null);
                 });
 
             modelBuilder.Entity("ExpenseTracker.Domain.Expenses.Expense", b =>

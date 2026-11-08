@@ -1,7 +1,7 @@
 export type BudgetState = 'ok' | 'warning' | 'exceeded'
 
 export interface BudgetStatus {
-  categoryId: number
+  categoryId: string
   categoryName: string
   categoryColor: string
   budget: number

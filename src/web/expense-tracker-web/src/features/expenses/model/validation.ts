@@ -5,7 +5,7 @@ export interface ExpenseDraft {
   description: string
   amount: string
   date: string
-  categoryId: number
+  categoryId: string
   notes: string
 }
 

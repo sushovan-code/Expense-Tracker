@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Hosts the real API in memory against a throwaway LocalDB database (created and dropped per run). -->
+  <!-- Hosts the real API in memory against a throwaway SQLite database file (created and deleted per test class). -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\ExpenseTracker.Api\ExpenseTracker.Api.csproj" />
   </ItemGroup>

@@ -18,14 +18,14 @@ public sealed class Expense : Entity
     public decimal Amount { get; private set; }
     public DateOnly Date { get; private set; }
     public string? Notes { get; private set; }
-    public DateTime CreatedAt { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
 
-    public int CategoryId { get; private set; }
+    public Guid CategoryId { get; private set; }
     public Category? Category { get; private set; }
 
-    public static Result<Expense> Create(ExpenseDetails details, DateTime createdAtUtc)
+    public static Result<Expense> Create(ExpenseDetails details, DateTimeOffset createdAt)
     {
-        var expense = new Expense { CreatedAt = createdAtUtc };
+        var expense = new Expense { CreatedAt = createdAt };
         var applied = expense.Apply(details);
         return applied.IsSuccess ? expense : applied.Error;
     }
@@ -43,7 +43,7 @@ public sealed class Expense : Entity
             return Error.Validation("amount", $"Amount must be between {MinAmount} and {MaxAmount:N0}.");
         if (decimal.Round(details.Amount, 2) != details.Amount)
             return Error.Validation("amount", "Amount can have at most two decimal places.");
-        if (details.CategoryId <= 0)
+        if (details.CategoryId == Guid.Empty)
             return Error.Validation("categoryId", "Pick a category.");
 
         var notes = string.IsNullOrWhiteSpace(details.Notes) ? null : details.Notes.Trim();

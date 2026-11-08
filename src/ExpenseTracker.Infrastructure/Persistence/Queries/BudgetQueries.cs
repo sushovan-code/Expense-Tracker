@@ -11,7 +11,7 @@ internal sealed class BudgetQueries(AppDbContext dbContext) : IBudgetQueries
         await Spending(dbContext.Categories.Where(c => c.MonthlyBudget != null).OrderBy(c => c.Name), from, to)
             .ToListAsync(cancellationToken);
 
-    public Task<CategorySpending?> GetCategorySpendingAsync(int categoryId, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
+    public Task<CategorySpending?> GetCategorySpendingAsync(Guid categoryId, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
         Spending(dbContext.Categories.Where(c => c.Id == categoryId), from, to).FirstOrDefaultAsync(cancellationToken);
 
     private static IQueryable<CategorySpending> Spending(IQueryable<Category> categories, DateOnly from, DateOnly to) =>

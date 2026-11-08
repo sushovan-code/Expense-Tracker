@@ -6,5 +6,5 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations;
 
 internal sealed class UserTokenConfiguration : IEntityTypeConfiguration<IdentityUserToken<Guid>>
 {
-    public void Configure(EntityTypeBuilder<IdentityUserToken<Guid>> builder) => builder.ToTable("UserTokens", AuthSchema.Name);
+    public void Configure(EntityTypeBuilder<IdentityUserToken<Guid>> builder) => builder.ToTable("UserTokens");
 }

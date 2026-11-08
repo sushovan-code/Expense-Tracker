@@ -17,7 +17,7 @@
 
   <ItemGroup Label="Data">
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
   </ItemGroup>
@@ -36,7 +36,6 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.19.0" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

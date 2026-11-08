@@ -5,10 +5,12 @@ namespace ExpenseTracker.Domain.Tests;
 
 public class ExpenseTests
 {
-    private static readonly DateTime CreatedAt = new(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 12, 0, 0, TimeSpan.Zero);
+    private static readonly Guid Food = Guid.CreateVersion7();
+    private static readonly Guid Housing = Guid.CreateVersion7();
 
     private static ExpenseDetails Valid(decimal amount = 250m, string description = "Groceries", string? notes = null) =>
-        new(description, amount, new DateOnly(2026, 10, 5), CategoryId: 1, notes);
+        new(description, amount, new DateOnly(2026, 10, 5), CategoryId: Food, notes);
 
     [Fact]
     public void Create_with_valid_details_trims_text_and_sets_values()
@@ -65,12 +67,12 @@ public class ExpenseTests
     {
         var expense = Expense.Create(Valid(), CreatedAt).Value!;
 
-        var result = expense.Update(new ExpenseDetails("Dinner", 999.99m, new DateOnly(2026, 9, 1), 3, null));
+        var result = expense.Update(new ExpenseDetails("Dinner", 999.99m, new DateOnly(2026, 9, 1), Housing, null));
 
         result.IsSuccess.ShouldBeTrue();
         expense.Description.ShouldBe("Dinner");
         expense.Amount.ShouldBe(999.99m);
-        expense.CategoryId.ShouldBe(3);
+        expense.CategoryId.ShouldBe(Housing);
         expense.CreatedAt.ShouldBe(CreatedAt);
     }
 

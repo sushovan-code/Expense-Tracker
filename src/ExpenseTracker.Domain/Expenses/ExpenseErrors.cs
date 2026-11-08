@@ -4,7 +4,7 @@ namespace ExpenseTracker.Domain.Expenses;
 
 public static class ExpenseErrors
 {
-    public static Error NotFound(int id) => Error.NotFound("Expense", id);
+    public static Error NotFound(Guid id) => Error.NotFound("Expense", id);
 
     public static readonly Error UnknownCategory =
         Error.Validation("categoryId", "The selected category does not exist.");

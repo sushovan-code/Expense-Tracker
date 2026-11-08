@@ -4,7 +4,7 @@ namespace ExpenseTracker.Domain.Categories;
 
 public static class CategoryErrors
 {
-    public static Error NotFound(int id) => Error.NotFound("Category", id);
+    public static Error NotFound(Guid id) => Error.NotFound("Category", id);
 
     public static readonly Error DuplicateName =
         Error.Validation("name", "A category with this name already exists.");

@@ -20,7 +20,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private sealed record ApiKey(Guid Id, string Prefix, List<string> Scopes);
     private sealed record CreatedApiKey(ApiKey ApiKey, string Key);
 
-    private static object NewExpense => new { description = "auth-test", amount = 10m, date = "2026-10-05", categoryId = 1 };
+    private static object NewExpense => new { description = "auth-test", amount = 10m, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId };
 
     private async Task<HttpResponseMessage> LoginAsync(HttpClient client, string email, string password) =>
         await client.PostAsJsonAsync("/api/auth/login", new { email, password }, Ct);
@@ -180,7 +180,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         (await reader.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await reader.GetAsync("/api/budgets", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await reader.PostAsJsonAsync("/api/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await reader.DeleteAsync("/api/categories/1", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await reader.DeleteAsync($"/api/categories/{Guid.NewGuid()}", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]
