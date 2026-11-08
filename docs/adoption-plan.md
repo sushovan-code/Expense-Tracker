@@ -50,7 +50,7 @@ Tick an item when its PR merges. Status after branch `chore/adopt-standards` (20
   - `Expense` and `Category` have no owner, so every signed-in user can read and edit everyone's data. That's the IDOR risk `security.md` warns about.
   - `SignalRChangeNotifier` broadcasts to `Clients.All`.
   - *Open question:* should data be per user or shared, as a household ledger? If shared, record the decision in an ADR instead.
-- [ ] **H: move the identity use cases into Application.** **Deferred, needs a decision:** this rewrites the authentication and user-admin code, and you asked me to leave the RBAC and JWT flow unchanged.
+- [x] **H: move the identity use cases into Application.** *Done in `refactor/identity-use-cases-to-application`:* `AuthService`, `UserAdminService`, `RoleAdminService` and `ApiKeyService` are internal use cases in `Application/Features/Identity`, behind seven narrow ports. The adapters keep `UserManager` and EF Core. Behaviour is unchanged: all auth integration tests pass as before.
   - `AuthService` (233 lines), `UserAdminService` (395), `RoleAdminService` and `ApiKeyService` are in `Infrastructure/Identity`, and they hold business orchestration: rank checks, session revocation and key limits.
   - Put that orchestration behind narrow ports (user store, refresh-token store, API-key store) and keep `UserManager` and EF Core in the adapters.
 - [x] **M: bind every setting with Options and validate on start.** Only `JwtOptions` does this today:
@@ -81,7 +81,7 @@ Tick an item when its PR merges. Status after branch `chore/adopt-standards` (20
   - [x] The cache TTL of 10 minutes, the rate-limit window of 1 minute and the JWT `ClockSkew` of 30 seconds are inline.
   - [x] The text "up to 10,000 rows" in `ExpenseEndpoints` duplicates `ExpenseService.MaxExportRows`.
 - [x] **M: make user creation atomic.** `UserAdminService.CreateAsync` creates the user, then adds roles, and deletes the user again if that fails. Use a transaction instead.
-- [ ] **M: shorten long methods** to under 30 lines. For example `UserAdminService.ListAsync` is about 45 lines, and `UserAdminService.cs` is 395 lines. *Partly done:* `ListAsync` is split. The rest of `UserAdminService` is **deferred** with the identity decision above.
+- [x] **M: shorten long methods** *Done:* user listing moved to `UserQueries`, and the sign-in checks to `AuthService.CheckCredentialsAsync`; `UserAdminService` keeps one short method per use case.
 - [ ] **M: make time handling consistent.** *`CreatedAt` done:* `Expense.CreatedAt` is now a `DateTimeOffset`, like the identity entities. **Still deferred:** The meaning of "current month" depends on a family time zone (family groups).
   - `Expense.CreatedAt` is a `DateTime`, while the identity entities use `DateTimeOffset`.
   - `BudgetService.GetOverviewAsync` and the CSV filename use `GetLocalNow()`, so the server's time zone decides the "current month".
@@ -100,7 +100,7 @@ All **deferred** to a later pass, per the owner. The isolation item moves to the
   - [ ] category CRUD, budgets
   - [ ] each admin endpoint
   - [ ] the `/hubs/expenses` hub
-- [ ] **H: unit-test the identity use cases:** refresh-token reuse detection, the user and role admin rules, API key limits and expiry, and `UserAccessProvider` caching and invalidation. This depends on moving them into Application (section 3).
+- [ ] **H: unit-test the identity use cases:** *Started:* `AuthServiceTests` covers unknown email, lockout, disabled accounts, refresh-token reuse and concurrent rotation. The user/role admin and API key rules are still covered only end to end.
 - [ ] **M: cover the remaining Application paths.**
   - [ ] `CategoryService`: update (not found, a duplicate name other than its own, success), create success, sort validation
   - [ ] `ExpenseService`: `GetAsync`, `SummarizeAsync` with an inverted range, update with an unknown ID or category, budget checks across months
@@ -135,7 +135,7 @@ All **deferred** to a later pass, per the owner. The isolation item moves to the
 - [ ] 3. `feature/<n>-data-ownership`: the `ICurrentUser` port, an owner ID and migration, per-user SignalR groups, IDOR tests. Changes the public contract, so it needs a decision first.
 - [x] 4. `fix/security-headers-and-ts-strict`: the security headers and TypeScript strict mode.
 - [x] 5. `refactor/options-and-constants`: Options naming and validation on start, and removing the magic values.
-- [ ] 6. `refactor/identity-use-cases-to-application`: move the identity use cases into Application, with unit tests.
+- [x] 6. `refactor/identity-use-cases-to-application`: move the identity use cases into Application, with unit tests.
 - [ ] 7. `refactor/vertical-slices-and-one-type-per-file`: split the files and rename commands and handlers.
 - [ ] 8. `feature/<n>-api-v1-contracts`: `/api/v1`, Request and Response mapping, a generated frontend client, idempotency keys. Changes the public contract.
 - [ ] 9. `test/coverage-gaps`: the remaining tests, the test renames and the coverage threshold.

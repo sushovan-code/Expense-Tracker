@@ -1,7 +1,7 @@
 using ExpenseTracker.Application.Abstractions.Identity;
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Application.Abstractions.Queries;
-using ExpenseTracker.Application.Features.Identity;
+using ExpenseTracker.Application.Security;
 using ExpenseTracker.Infrastructure.Identity;
 using ExpenseTracker.Infrastructure.Persistence;
 using ExpenseTracker.Infrastructure.Persistence.Queries;
@@ -9,6 +9,7 @@ using ExpenseTracker.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ExpenseTracker.Infrastructure;
 
@@ -82,11 +83,18 @@ public static class DependencyInjection
 
         services.AddHybridCache();
 
+        // The sign-in use cases take a plain policy, so Application needs no options package.
+        services.AddSingleton(sp => new SessionPolicy(sp.GetRequiredService<IOptions<IdentityStoreOptions>>().Value.RefreshTokenLifetime));
+
         services.AddScoped<IUserAccessProvider, UserAccessProvider>();
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IUserAdminService, UserAdminService>();
-        services.AddScoped<IRoleAdminService, RoleAdminService>();
-        services.AddScoped<IApiKeyService, ApiKeyService>();
+        services.AddScoped<IdentityUserStore>();
+        services.AddScoped<IUserAccountStore>(sp => sp.GetRequiredService<IdentityUserStore>());
+        services.AddScoped<IUserCredentialStore>(sp => sp.GetRequiredService<IdentityUserStore>());
+        services.AddScoped<IUserGrantStore>(sp => sp.GetRequiredService<IdentityUserStore>());
+        services.AddScoped<IUserQueries, UserQueries>();
+        services.AddScoped<IRolePermissionStore, RolePermissionStore>();
+        services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
+        services.AddScoped<IApiKeyStore, ApiKeyStore>();
         services.AddScoped<IdentitySeeder>();
     }
 }

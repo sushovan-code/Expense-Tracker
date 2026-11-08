@@ -2,10 +2,10 @@ using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ExpenseTracker.Infrastructure.Identity;
+namespace ExpenseTracker.Application.Security;
 
 /// <summary>Opaque secrets (refresh tokens, API keys) and their at-rest hashes.</summary>
-internal static class SecureTokens
+public static class SecureTokens
 {
     private const int DefaultEntropyBytes = 32;
 
