@@ -3,16 +3,14 @@ using ExpenseTracker.Domain.Common;
 
 namespace ExpenseTracker.Domain.Expenses;
 
-/// <summary>The editable details of an expense, validated as a whole.</summary>
-public readonly record struct ExpenseDetails(string Description, decimal Amount, DateOnly Date, int CategoryId, string? Notes);
-
 /// <summary>Money spent on something, on a day, in a category.</summary>
 public sealed class Expense : Entity
 {
     public const int DescriptionMaxLength = 200;
     public const int NotesMaxLength = 1000;
     public const decimal MinAmount = 0.01m;
-    public const decimal MaxAmount = 999_999_999m;
+    public const int MaxWholeAmount = 999_999_999;
+    public const decimal MaxAmount = MaxWholeAmount;
 
     private Expense() { } // EF Core
 

@@ -7,48 +7,48 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.Persistence.Queries;
 
-internal sealed class ExpenseQueries(AppDbContext db) : IExpenseQueries
+internal sealed class ExpenseQueries(AppDbContext dbContext) : IExpenseQueries
 {
     /// <summary>Projection translated to SQL, so only the needed columns are read.</summary>
     private static readonly Expression<Func<Expense, ExpenseDto>> ToDto = e => new ExpenseDto(
         e.Id, e.Description, e.Amount, e.Date, e.CategoryId, e.Category!.Name, e.Category.Color, e.Notes, e.CreatedAt);
 
-    public async Task<ExpensePage> ListAsync(ExpenseFilter filter, PageRequest request, SortSpec sort, CancellationToken ct)
+    public async Task<ExpensePage> ListAsync(ExpenseFilter filter, PageRequest request, SortSpec sort, CancellationToken cancellationToken)
     {
         var filtered = Filter(filter);
 
-        var totalCount = await filtered.CountAsync(ct);
-        var totalAmount = totalCount == 0 ? 0 : await filtered.SumAsync(e => e.Amount, ct);
+        var totalCount = await filtered.CountAsync(cancellationToken);
+        var totalAmount = totalCount == 0 ? 0 : await filtered.SumAsync(e => e.Amount, cancellationToken);
         var (page, pageSize) = Paging.Resolve(request, totalCount);
 
         var items = await Sort(filtered, sort)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(ToDto)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         return new ExpensePage(items, page, pageSize, totalCount, totalAmount);
     }
 
-    public async Task<IReadOnlyList<ExpenseDto>> ListAllAsync(ExpenseFilter filter, SortSpec sort, int maxRows, CancellationToken ct) =>
-        await Sort(Filter(filter), sort).Take(maxRows).Select(ToDto).ToListAsync(ct);
+    public async Task<IReadOnlyList<ExpenseDto>> ListAllAsync(ExpenseFilter filter, SortSpec sort, int maxRows, CancellationToken cancellationToken) =>
+        await Sort(Filter(filter), sort).Take(maxRows).Select(ToDto).ToListAsync(cancellationToken);
 
-    public Task<ExpenseDto?> GetAsync(int id, CancellationToken ct) =>
-        db.Expenses.AsNoTracking().Where(e => e.Id == id).Select(ToDto).FirstOrDefaultAsync(ct);
+    public Task<ExpenseDto?> GetAsync(int id, CancellationToken cancellationToken) =>
+        dbContext.Expenses.AsNoTracking().Where(e => e.Id == id).Select(ToDto).FirstOrDefaultAsync(cancellationToken);
 
-    public async Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken ct)
+    public async Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
     {
         var expenses = Filter(new ExpenseFilter(from, to, null, null));
 
         var byCategory = await expenses
             .GroupBy(e => new { e.CategoryId, e.Category!.Name, e.Category.Color })
             .Select(g => new CategoryTotal(g.Key.CategoryId, g.Key.Name, g.Key.Color, g.Sum(e => e.Amount), g.Count()))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         var byMonth = await expenses
             .GroupBy(e => new { e.Date.Year, e.Date.Month })
             .Select(g => new MonthTotal(g.Key.Year, g.Key.Month, g.Sum(e => e.Amount)))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         var total = byCategory.Sum(c => c.Total);
         var count = byCategory.Sum(c => c.Count);
@@ -63,7 +63,7 @@ internal sealed class ExpenseQueries(AppDbContext db) : IExpenseQueries
 
     private IQueryable<Expense> Filter(ExpenseFilter f)
     {
-        var query = db.Expenses.AsNoTracking();
+        var query = dbContext.Expenses.AsNoTracking();
         if (f.From is not null) query = query.Where(e => e.Date >= f.From);
         if (f.To is not null) query = query.Where(e => e.Date <= f.To);
         if (f.CategoryId is not null) query = query.Where(e => e.CategoryId == f.CategoryId);

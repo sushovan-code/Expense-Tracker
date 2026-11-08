@@ -14,46 +14,45 @@ public sealed record BudgetStatusDto(
     decimal Spent,
     decimal Remaining,
     decimal PercentUsed,
-    /// <summary>ok, warning or exceeded.</summary>
-    string State);
+    BudgetState State);
 
 public sealed record BudgetOverviewDto(int Year, int Month, decimal TotalBudget, decimal TotalSpent, IReadOnlyList<BudgetStatusDto> Categories);
 
 public interface IBudgetService
 {
     /// <summary>Budget status for a month (defaults to the current month).</summary>
-    Task<BudgetOverviewDto> GetOverviewAsync(int? year, int? month, CancellationToken ct);
+    Task<BudgetOverviewDto> GetOverviewAsync(int? year, int? month, CancellationToken cancellationToken);
 }
 
 /// <summary>Used by other use cases to detect the moment a category goes over its budget.</summary>
 internal interface IBudgetMonitor
 {
-    Task<BudgetAlert?> DetectOverrunAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken ct);
+    Task<BudgetAlert?> DetectOverrunAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken);
 }
 
 internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider clock, ILogger<BudgetService> logger)
     : IBudgetService, IBudgetMonitor
 {
-    public async Task<BudgetOverviewDto> GetOverviewAsync(int? year, int? month, CancellationToken ct)
+    public async Task<BudgetOverviewDto> GetOverviewAsync(int? year, int? month, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
         var (from, to) = BudgetPolicy.Month(year ?? today.Year, month ?? today.Month);
 
-        var statuses = (await queries.GetBudgetedSpendingAsync(from, to, ct))
+        var statuses = (await queries.GetBudgetedSpendingAsync(from, to, cancellationToken))
             .Where(s => s.Budget is not null)
             .Select(s => ToStatus(s, s.Budget!.Value))
             .ToList();
 
-        LogBudgetStatus(logger, from.Year, from.Month, statuses.Count, statuses.Count(s => s.State == "exceeded"));
+        LogBudgetStatus(logger, from.Year, from.Month, statuses.Count, statuses.Count(s => s.State == BudgetState.Exceeded));
         return new BudgetOverviewDto(from.Year, from.Month, statuses.Sum(s => s.Budget), statuses.Sum(s => s.Spent), statuses);
     }
 
-    public async Task<BudgetAlert?> DetectOverrunAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken ct)
+    public async Task<BudgetAlert?> DetectOverrunAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken)
     {
         if (addedAmount <= 0) return null;
 
         var (from, to) = BudgetPolicy.MonthOf(date);
-        var spending = await queries.GetCategorySpendingAsync(categoryId, from, to, ct);
+        var spending = await queries.GetCategorySpendingAsync(categoryId, from, to, cancellationToken);
         if (spending?.Budget is not { } budget) return null;
         if (!BudgetPolicy.CrossedLimit(budget, spending.Spent - addedAmount, spending.Spent)) return null;
 
@@ -64,7 +63,7 @@ internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider
     private static BudgetStatusDto ToStatus(CategorySpending s, decimal budget) => new(
         s.CategoryId, s.Name, s.Color, budget, s.Spent, budget - s.Spent,
         BudgetPolicy.PercentUsed(budget, s.Spent),
-        BudgetPolicy.StateOf(budget, s.Spent).ToString().ToLowerInvariant());
+        BudgetPolicy.StateOf(budget, s.Spent));
 
     [LoggerMessage(EventId = LogEvents.BudgetStatusComputed, Level = LogLevel.Debug,
         Message = "Computed budget status for {Year}-{Month}: {BudgetedCategories} budgeted categories, {ExceededCategories} over budget")]

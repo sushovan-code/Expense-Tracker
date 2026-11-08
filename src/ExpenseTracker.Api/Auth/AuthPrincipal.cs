@@ -4,24 +4,6 @@ using ExpenseTracker.Application.Security;
 
 namespace ExpenseTracker.Api.Auth;
 
-internal static class AuthSchemes
-{
-    /// <summary>Default scheme: forwards to <see cref="ApiKey"/> when an <c>x-api-key</c> header is present, else to <see cref="Bearer"/>.</summary>
-    public const string Default = "JwtOrApiKey";
-    public const string Bearer = "Bearer";
-    public const string ApiKey = "ApiKey";
-    public const string ApiKeyHeader = "x-api-key";
-}
-
-internal static class AuthPolicies
-{
-    /// <summary>Signed in with a role of Admin or higher.</summary>
-    public const string AdminOrAbove = nameof(AdminOrAbove);
-
-    /// <summary>Signed in interactively (JWT). API keys can't manage credentials such as passwords and other API keys.</summary>
-    public const string Interactive = nameof(Interactive);
-}
-
 /// <summary>Builds and reads the authenticated principal. Both schemes produce the same claim shape.</summary>
 internal static class AuthPrincipal
 {

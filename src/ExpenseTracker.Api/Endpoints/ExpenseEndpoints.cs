@@ -26,7 +26,7 @@ internal static class ExpenseEndpoints
             .RequirePermission(Permissions.Expenses.Export)
             .WithName("ExportExpenses")
             .WithSummary("Export expenses as CSV")
-            .WithDescription("Same filters and sort as the list, without paging (up to 10,000 rows).")
+            .WithDescription($"Same filters and sort as the list, without paging (up to {ExpenseExport.MaxRows:N0} rows).")
             .Produces(StatusCodes.Status200OK, contentType: "text/csv")
             .ProducesValidationProblem();
 
@@ -73,36 +73,36 @@ internal static class ExpenseEndpoints
     }
 
     private static async Task<Results<Ok<ExpensePage>, ProblemHttpResult>> List(
-        [AsParameters] ExpenseListQuery query, IExpenseService service, CancellationToken ct) =>
-        (await service.ListAsync(query.ToRequest(), ct)).ToHttpResult(TypedResults.Ok);
+        [AsParameters] ExpenseListQuery query, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.ListAsync(query.ToRequest(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> Export(
-        [AsParameters] ExpenseExportQuery query, IExpenseService service, TimeProvider clock, CancellationToken ct) =>
-        (await service.ExportAsync(query.ToFilter(), query.SortBy, query.SortDir, ct)).ToHttpResult(rows =>
+        [AsParameters] ExpenseExportQuery query, IExpenseService service, TimeProvider clock, CancellationToken cancellationToken) =>
+        (await service.ExportAsync(query.ToFilter(), query.SortBy, query.SortDir, cancellationToken)).ToHttpResult(rows =>
             TypedResults.File(ExpenseCsvWriter.Write(rows), "text/csv; charset=utf-8", $"expenses-{clock.GetLocalNow():yyyyMMdd-HHmm}.csv"));
 
     private static async Task<Results<Ok<ExpenseSummary>, ProblemHttpResult>> Summary(
-        [AsParameters] SummaryQuery query, IExpenseService service, CancellationToken ct) =>
-        (await service.SummarizeAsync(query.From, query.To, ct)).ToHttpResult(TypedResults.Ok);
+        [AsParameters] SummaryQuery query, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.SummarizeAsync(query.From, query.To, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<Ok<ExpenseDto>, ProblemHttpResult>> Get(
-        int id, IExpenseService service, CancellationToken ct) =>
-        (await service.GetAsync(id, ct)).ToHttpResult(TypedResults.Ok);
+        int id, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.GetAsync(id, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<CreatedAtRoute<ExpenseDto>, ProblemHttpResult>> Create(
-        ExpenseRequest request, IExpenseService service, CancellationToken ct) =>
-        (await service.CreateAsync(request.ToCommand(), ct))
+        ExpenseRequest request, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.CreateAsync(request.ToCommand(), cancellationToken))
             .ToHttpResult(e => TypedResults.CreatedAtRoute(e, "GetExpense", new { id = e.Id }));
 
     private static async Task<Results<Ok<ExpenseDto>, ProblemHttpResult>> Update(
-        int id, ExpenseRequest request, IExpenseService service, CancellationToken ct) =>
-        (await service.UpdateAsync(id, request.ToCommand(), ct)).ToHttpResult(TypedResults.Ok);
+        int id, ExpenseRequest request, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.UpdateAsync(id, request.ToCommand(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
-        int id, IExpenseService service, CancellationToken ct) =>
-        (await service.DeleteAsync(id, ct)).ToHttpResult();
+        int id, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.DeleteAsync(id, cancellationToken)).ToHttpResult();
 
     private static async Task<Results<Ok<BulkDeleteResult>, ProblemHttpResult>> BulkDelete(
-        BulkDeleteRequest request, IExpenseService service, CancellationToken ct) =>
-        (await service.BulkDeleteAsync(request.Ids, ct)).ToHttpResult(TypedResults.Ok);
+        BulkDeleteRequest request, IExpenseService service, CancellationToken cancellationToken) =>
+        (await service.BulkDeleteAsync(request.Ids, cancellationToken)).ToHttpResult(TypedResults.Ok);
 }

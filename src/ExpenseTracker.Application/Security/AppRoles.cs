@@ -1,8 +1,5 @@
 namespace ExpenseTracker.Application.Security;
 
-/// <summary>A built-in role. <paramref name="Rank"/> orders roles for "this role or above" checks.</summary>
-public sealed record RoleDefinition(string Name, int Rank, string Description, IReadOnlyList<string> DefaultPermissions);
-
 /// <summary>
 /// The built-in roles, highest first. Roles are coarse groupings of permissions plus a rank: the rank
 /// decides who may manage whom (see <see cref="AccessPolicy"/>), the permissions decide what each role can do.

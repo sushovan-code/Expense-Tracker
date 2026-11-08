@@ -16,14 +16,14 @@ namespace ExpenseTracker.Infrastructure.Identity;
 public sealed partial class IdentitySeeder(
     UserManager<AppUser> users,
     RoleManager<AppRole> roles,
-    AppDbContext db,
-    IOptions<IdentitySettings> settings,
+    AppDbContext dbContext,
+    IOptions<IdentityStoreOptions> settings,
     TimeProvider clock,
     ILogger<IdentitySeeder> logger)
 {
-    public async Task SeedAsync(CancellationToken ct = default)
+    public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
-        var rolesCreated = await SeedRolesAsync(ct);
+        var rolesCreated = await SeedRolesAsync(cancellationToken);
         var usersCreated = 0;
 
         var seed = settings.Value.Seed;
@@ -36,7 +36,7 @@ public sealed partial class IdentitySeeder(
             usersCreated++;
         }
 
-        if (seed.DemoUsers && !string.IsNullOrWhiteSpace(seed.AdminEmail) && !string.IsNullOrWhiteSpace(seed.DemoPassword))
+        if (seed.ShouldSeedDemoUsers && !string.IsNullOrWhiteSpace(seed.AdminEmail) && !string.IsNullOrWhiteSpace(seed.DemoPassword))
         {
             var domain = seed.AdminEmail[(seed.AdminEmail.IndexOf('@') + 1)..];
             foreach (var role in new[] { AppRoles.Admin, AppRoles.User, AppRoles.Reader })
@@ -49,7 +49,7 @@ public sealed partial class IdentitySeeder(
         LogSeeded(logger, rolesCreated, usersCreated);
     }
 
-    private async Task<int> SeedRolesAsync(CancellationToken ct)
+    private async Task<int> SeedRolesAsync(CancellationToken cancellationToken)
     {
         var created = 0;
         foreach (var definition in AppRoles.All)
@@ -61,7 +61,7 @@ public sealed partial class IdentitySeeder(
                 var result = await roles.CreateAsync(role);
                 if (!result.Succeeded) throw new InvalidOperationException($"Could not create role {definition.Name}: {result}");
 
-                db.RoleClaims.AddRange(definition.DefaultPermissions.Select(p => NewPermission(role.Id, p)));
+                dbContext.RoleClaims.AddRange(definition.DefaultPermissions.Select(p => NewPermission(role.Id, p)));
                 created++;
             }
             else if (role.Description != definition.Description)
@@ -69,26 +69,26 @@ public sealed partial class IdentitySeeder(
                 role.Description = definition.Description;
             }
         }
-        await db.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         // Drop permissions that no longer exist in the catalog (renamed or removed in code).
-        var stale = (await db.RoleClaims.Where(c => c.ClaimType == AppClaimTypes.Permission).ToListAsync(ct))
+        var stale = (await dbContext.RoleClaims.Where(c => c.ClaimType == AppClaimTypes.Permission).ToListAsync(cancellationToken))
             .Where(c => !Permissions.IsKnown(c.ClaimValue ?? ""))
             .ToList();
-        db.RoleClaims.RemoveRange(stale);
+        dbContext.RoleClaims.RemoveRange(stale);
 
         // Keep SuperAdmin's stored permissions complete (its effective permissions are all of them regardless).
         var superAdmin = await roles.FindByNameAsync(AppRoles.SuperAdmin);
         if (superAdmin is not null)
         {
-            var held = await db.RoleClaims
+            var held = await dbContext.RoleClaims
                 .Where(c => c.RoleId == superAdmin.Id && c.ClaimType == AppClaimTypes.Permission)
                 .Select(c => c.ClaimValue!)
-                .ToListAsync(ct);
-            db.RoleClaims.AddRange(Permissions.All.Select(p => p.Name).Except(held).Select(p => NewPermission(superAdmin.Id, p)));
+                .ToListAsync(cancellationToken);
+            dbContext.RoleClaims.AddRange(Permissions.All.Select(p => p.Name).Except(held).Select(p => NewPermission(superAdmin.Id, p)));
         }
 
-        await db.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(cancellationToken);
         return created;
     }
 

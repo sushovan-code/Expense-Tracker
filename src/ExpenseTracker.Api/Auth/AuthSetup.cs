@@ -7,7 +7,6 @@ using ExpenseTracker.Application.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -16,6 +15,14 @@ namespace ExpenseTracker.Api.Auth;
 internal static class AuthSetup
 {
     public const string AuthRateLimitPolicy = "auth";
+
+    private const string RateLimitSetting = "Authentication:RateLimitPerMinute";
+    private const int DefaultAuthRequestsPerMinute = 10;
+    private const string UnknownClientPartition = "unknown";
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
+
+    /// <summary>Tolerated clock difference between the token issuer and this server.</summary>
+    private static readonly TimeSpan AccessTokenClockSkew = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// JWT bearer + API key authentication, permission/role-rank authorization that is deny-by-default,
@@ -48,7 +55,7 @@ internal static class AuthSetup
                 ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                 NameClaimType = AppClaimTypes.Name,
                 RoleClaimType = AppClaimTypes.Role,
-                ClockSkew = TimeSpan.FromSeconds(30),
+                ClockSkew = AccessTokenClockSkew,
             };
             bearer.Events = new JwtBearerEvents
             {
@@ -71,13 +78,13 @@ internal static class AuthSetup
         services.AddSingleton<IAuthorizationHandler, MinimumRoleAuthorizationHandler>();
 
         // Brute-force and credential-stuffing brake on sign-in and refresh.
-        var permitLimit = configuration.GetValue("Authentication:RateLimitPerMinute", 10);
+        var permitLimit = configuration.GetValue(RateLimitSetting, DefaultAuthRequestsPerMinute);
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddPolicy(AuthRateLimitPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                _ => new FixedWindowRateLimiterOptions { PermitLimit = permitLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+                context.Connection.RemoteIpAddress?.ToString() ?? UnknownClientPartition,
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = permitLimit, Window = RateLimitWindow, QueueLimit = 0 }));
             options.OnRejected = (context, _) =>
             {
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))

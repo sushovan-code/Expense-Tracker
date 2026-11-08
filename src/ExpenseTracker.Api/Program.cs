@@ -5,6 +5,7 @@ using ExpenseTracker.Application;
 using ExpenseTracker.Infrastructure;
 using ExpenseTracker.Infrastructure.Identity;
 using ExpenseTracker.Infrastructure.Persistence;
+using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 
 // Composition root: the only place that knows every layer.
@@ -25,16 +26,23 @@ builder.Services
 
 var app = builder.Build();
 
-var features = app.Configuration.GetSection(FeatureOptions.Section).Get<FeatureOptions>() ?? new();
+var features = app.Services.GetRequiredService<IOptions<FeatureOptions>>().Value;
 app.LogStartupConfiguration(features);
 
 // Outermost, so it records the final status code (including 500s produced by the exception handler).
 app.UseMiddleware<RequestLoggingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+if (!app.Environment.IsDevelopment())
+{
+    // Browsers only honour HSTS over HTTPS; Development keeps plain HTTP for the local ports.
+    app.UseHsts();
+}
+
 app.MapDefaultEndpoints();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-if (features.ApiDocs)
+if (features.IsApiDocsEnabled)
 {
     app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference(options => options
@@ -46,15 +54,22 @@ if (features.ApiDocs)
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
-    if (features.MigrateDatabaseOnStartup)
-        await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().MigrateAsync();
+    // Stops waiting on the database if the host is shut down during startup.
+    var stopping = app.Lifetime.ApplicationStopping;
+
+    if (features.ShouldMigrateDatabaseOnStartup)
+    {
+        await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().MigrateAsync(stopping);
+    }
 
     // Built-in roles and their default permissions, plus the bootstrap administrator when configured.
-    if (features.SeedIdentityOnStartup)
-        await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
+    if (features.ShouldSeedIdentityOnStartup)
+    {
+        await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(stopping);
+    }
 }
 
-app.UseCors(CorsSettings.PolicyName);
+app.UseCors(CorsPolicyOptions.PolicyName);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

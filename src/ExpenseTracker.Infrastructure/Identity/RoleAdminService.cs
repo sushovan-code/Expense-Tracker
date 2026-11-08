@@ -12,22 +12,22 @@ namespace ExpenseTracker.Infrastructure.Identity;
 
 /// <summary>Role permissions are stored as Identity role claims of type <c>permission</c>.</summary>
 internal sealed partial class RoleAdminService(
-    AppDbContext db,
+    AppDbContext dbContext,
     IUserAccessProvider access,
     ILogger<RoleAdminService> logger) : IRoleAdminService
 {
     private static readonly IReadOnlyList<string> AllPermissions = Permissions.All.Select(p => p.Name).ToArray();
 
-    public async Task<IReadOnlyList<RoleDto>> ListAsync(Actor actor, CancellationToken ct)
+    public async Task<IReadOnlyList<RoleDto>> ListAsync(Actor actor, CancellationToken cancellationToken)
     {
-        var roles = await db.Roles.AsNoTracking().Select(r => new { r.Id, r.Name }).ToListAsync(ct);
-        var claims = await db.RoleClaims.AsNoTracking()
+        var roles = await dbContext.Roles.AsNoTracking().Select(r => new { r.Id, r.Name }).ToListAsync(cancellationToken);
+        var claims = await dbContext.RoleClaims.AsNoTracking()
             .Where(c => c.ClaimType == AppClaimTypes.Permission)
             .Select(c => new { c.RoleId, c.ClaimValue })
-            .ToListAsync(ct);
-        var counts = await db.UserRoles.GroupBy(ur => ur.RoleId)
+            .ToListAsync(cancellationToken);
+        var counts = await dbContext.UserRoles.GroupBy(ur => ur.RoleId)
             .Select(g => new { RoleId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
+            .ToDictionaryAsync(x => x.RoleId, x => x.Count, cancellationToken);
 
         var result = new List<RoleDto>();
         foreach (var definition in AppRoles.All)
@@ -47,7 +47,7 @@ internal sealed partial class RoleAdminService(
     }
 
     public async Task<Result<RoleDto>> SetPermissionsAsync(
-        Actor actor, string role, IReadOnlyList<string> permissions, CancellationToken ct)
+        Actor actor, string role, IReadOnlyList<string> permissions, CancellationToken cancellationToken)
     {
         if (AccessPolicy.CanEditRole(actor, role) is { } denied)
         {
@@ -60,12 +60,12 @@ internal sealed partial class RoleAdminService(
             return Error.Validation("permissions", $"Unknown permission '{unknown}'.");
 
         var normalizedName = role.ToUpperInvariant();
-        var entity = await db.Roles.SingleOrDefaultAsync(r => r.NormalizedName == normalizedName, ct);
+        var entity = await dbContext.Roles.SingleOrDefaultAsync(r => r.NormalizedName == normalizedName, cancellationToken);
         if (entity is null) return new Error(ErrorKind.NotFound, "Role not found", $"Role '{role}' does not exist.");
 
-        var current = await db.RoleClaims
+        var current = await dbContext.RoleClaims
             .Where(c => c.RoleId == entity.Id && c.ClaimType == AppClaimTypes.Permission)
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
         var currentValues = current.Select(c => c.ClaimValue!).ToHashSet(StringComparer.Ordinal);
 
         var toAdd = requested.Where(p => !currentValues.Contains(p)).ToList();
@@ -78,21 +78,21 @@ internal sealed partial class RoleAdminService(
             return cannotGrant;
         }
 
-        db.RoleClaims.RemoveRange(toRemove);
-        db.RoleClaims.AddRange(toAdd.Select(p => new IdentityRoleClaim<Guid>
+        dbContext.RoleClaims.RemoveRange(toRemove);
+        dbContext.RoleClaims.AddRange(toAdd.Select(p => new IdentityRoleClaim<Guid>
         {
             RoleId = entity.Id,
             ClaimType = AppClaimTypes.Permission,
             ClaimValue = p,
         }));
-        await db.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         // Every member of the role is affected.
-        await access.InvalidateAllAsync(ct);
+        await access.InvalidateAllAsync(cancellationToken);
         LogRolePermissionsChanged(logger, actor.UserId, entity.Name!,
             string.Join(", ", toAdd), string.Join(", ", toRemove.Select(c => c.ClaimValue)));
 
-        return (await ListAsync(actor, ct)).Single(r => r.Name == entity.Name);
+        return (await ListAsync(actor, cancellationToken)).Single(r => r.Name == entity.Name);
     }
 
     [LoggerMessage(EventId = LogEvents.RolePermissionsChanged, Level = LogLevel.Information,

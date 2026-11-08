@@ -18,49 +18,26 @@ namespace ExpenseTracker.Infrastructure.Identity;
 /// </remarks>
 internal sealed partial class UserAdminService(
     UserManager<AppUser> users,
-    AppDbContext db,
+    AppDbContext dbContext,
     IUserAccessProvider access,
     TimeProvider clock,
     ILogger<UserAdminService> logger) : IUserAdminService
 {
-    public async Task<Result<PagedResult<UserSummaryDto>>> ListAsync(UserListRequest request, CancellationToken ct)
+    public async Task<Result<PagedResult<UserSummaryDto>>> ListAsync(UserListRequest request, CancellationToken cancellationToken)
     {
         var sort = Paging.ResolveSort(request.SortBy, request.SortDir, UserSorting.Default, defaultDescending: false, UserSorting.Fields);
         if (!sort.IsSuccess) return sort.Error;
 
-        IQueryable<AppUser> query = db.Users.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var search = request.Search.Trim();
-            query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
-        }
-        if (!string.IsNullOrWhiteSpace(request.Role))
-        {
-            var role = request.Role.Trim().ToUpperInvariant();
-            query = query.Where(u => db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.NormalizedName == role)));
-        }
-
-        var total = await query.CountAsync(ct);
+        var query = FilterUsers(request);
+        var total = await query.CountAsync(cancellationToken);
         var (page, pageSize) = Paging.Resolve(request.Page, total);
 
-        var ordered = (sort.Value.Field, sort.Value.Descending) switch
-        {
-            ("email", false) => query.OrderBy(u => u.Email),
-            ("email", true) => query.OrderByDescending(u => u.Email),
-            ("created", false) => query.OrderBy(u => u.CreatedAt),
-            ("created", true) => query.OrderByDescending(u => u.CreatedAt),
-            ("lastlogin", false) => query.OrderBy(u => u.LastLoginAt),
-            ("lastlogin", true) => query.OrderByDescending(u => u.LastLoginAt),
-            (_, true) => query.OrderByDescending(u => u.DisplayName),
-            _ => query.OrderBy(u => u.DisplayName),
-        };
-
-        var rows = await ordered.ThenBy(u => u.Id)
+        var rows = await SortUsers(query, sort.Value).ThenBy(u => u.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(u => new { u.Id, u.Email, u.DisplayName, u.IsActive, u.LockoutEnd, u.CreatedAt, u.LastLoginAt })
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
-        var roles = await RolesByUserAsync(rows.Select(r => r.Id).ToList(), ct);
+        var roles = await RolesByUserAsync(rows.Select(r => r.Id).ToList(), cancellationToken);
         var now = clock.GetUtcNow();
         var items = rows.Select(r => new UserSummaryDto(
             r.Id, r.Email ?? "", r.DisplayName, roles.GetValueOrDefault(r.Id) ?? [], r.IsActive, r.LockoutEnd > now, r.CreatedAt, r.LastLoginAt))
@@ -69,14 +46,44 @@ internal sealed partial class UserAdminService(
         return new PagedResult<UserSummaryDto>(items, page, pageSize, total);
     }
 
-    public async Task<Result<UserDetailDto>> GetAsync(Guid id, CancellationToken ct)
+    private IQueryable<AppUser> FilterUsers(UserListRequest request)
+    {
+        IQueryable<AppUser> query = dbContext.Users.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim();
+            query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Role))
+        {
+            var role = request.Role.Trim().ToUpperInvariant();
+            query = query.Where(u => dbContext.UserRoles.Any(ur => ur.UserId == u.Id && dbContext.Roles.Any(r => r.Id == ur.RoleId && r.NormalizedName == role)));
+        }
+
+        return query;
+    }
+
+    private static IOrderedQueryable<AppUser> SortUsers(IQueryable<AppUser> query, SortSpec sort) => (sort.Field, sort.Descending) switch
+    {
+        ("email", false) => query.OrderBy(u => u.Email),
+        ("email", true) => query.OrderByDescending(u => u.Email),
+        ("created", false) => query.OrderBy(u => u.CreatedAt),
+        ("created", true) => query.OrderByDescending(u => u.CreatedAt),
+        ("lastlogin", false) => query.OrderBy(u => u.LastLoginAt),
+        ("lastlogin", true) => query.OrderByDescending(u => u.LastLoginAt),
+        (_, true) => query.OrderByDescending(u => u.DisplayName),
+        _ => query.OrderBy(u => u.DisplayName),
+    };
+
+    public async Task<Result<UserDetailDto>> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         var user = await users.FindByIdAsync(id.ToString());
         if (user is null) return Error.NotFound("User", id);
-        return await ToDetailAsync(user, ct);
+        return await ToDetailAsync(user, cancellationToken);
     }
 
-    public async Task<Result<UserDetailDto>> CreateAsync(Actor actor, CreateUserCommand command, CancellationToken ct)
+    public async Task<Result<UserDetailDto>> CreateAsync(Actor actor, CreateUserCommand command, CancellationToken cancellationToken)
     {
         var roles = command.Roles.Select(r => r.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (roles.Count == 0) return Error.Validation("roles", "Assign at least one role.");
@@ -93,21 +100,36 @@ internal sealed partial class UserAdminService(
             CreatedAt = clock.GetUtcNow(),
         };
 
-        var created = await users.CreateAsync(user, command.Password);
-        if (!created.Succeeded) return created.ToError();
-
-        var assigned = await users.AddToRolesAsync(user, roles.Select(Canonical));
-        if (!assigned.Succeeded)
+        // The account and its roles are saved together, so a failed role assignment leaves no half-created user.
+        var saved = await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            await users.DeleteAsync(user);
-            return assigned.ToError();
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            var created = await users.CreateAsync(user, command.Password);
+            if (!created.Succeeded)
+            {
+                return created.ToError();
+            }
+
+            var assigned = await users.AddToRolesAsync(user, roles.Select(Canonical));
+            if (!assigned.Succeeded)
+            {
+                return assigned.ToError();
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return (Error?)null;
+        });
+        if (saved is not null)
+        {
+            return saved;
         }
 
         LogUserCreated(logger, actor.UserId, user.Id, string.Join(", ", roles.Select(Canonical)));
-        return await ToDetailAsync(user, ct);
+        return await ToDetailAsync(user, cancellationToken);
     }
 
-    public async Task<Result<UserDetailDto>> UpdateAsync(Actor actor, Guid id, UpdateUserCommand command, CancellationToken ct)
+    public async Task<Result<UserDetailDto>> UpdateAsync(Actor actor, Guid id, UpdateUserCommand command, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -137,15 +159,15 @@ internal sealed partial class UserAdminService(
         }
         if (deactivated)
         {
-            await db.RefreshTokens.RevokeUserSessionsAsync(user.Id, clock.GetUtcNow(), ct);
+            await dbContext.RefreshTokens.RevokeUserSessionsAsync(user.Id, clock.GetUtcNow(), cancellationToken);
         }
 
-        await access.InvalidateAsync(user.Id, ct);
+        await access.InvalidateAsync(user.Id, cancellationToken);
         LogUserUpdated(logger, actor.UserId, user.Id, emailChanged, user.IsActive);
-        return await ToDetailAsync(user, ct);
+        return await ToDetailAsync(user, cancellationToken);
     }
 
-    public async Task<Result<UserDetailDto>> SetRolesAsync(Actor actor, Guid id, IReadOnlyList<string> roles, CancellationToken ct)
+    public async Task<Result<UserDetailDto>> SetRolesAsync(Actor actor, Guid id, IReadOnlyList<string> roles, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -171,12 +193,12 @@ internal sealed partial class UserAdminService(
             if (!added.Succeeded) return added.ToError();
         }
 
-        await access.InvalidateAsync(user.Id, ct);
+        await access.InvalidateAsync(user.Id, cancellationToken);
         LogUserRolesChanged(logger, actor.UserId, user.Id, string.Join(", ", current), string.Join(", ", requested.Select(Canonical)));
-        return await ToDetailAsync(user, ct);
+        return await ToDetailAsync(user, cancellationToken);
     }
 
-    public async Task<Result<UserDetailDto>> AddClaimAsync(Actor actor, Guid id, ClaimDto claim, CancellationToken ct)
+    public async Task<Result<UserDetailDto>> AddClaimAsync(Actor actor, Guid id, ClaimDto claim, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -195,14 +217,14 @@ internal sealed partial class UserAdminService(
         {
             var added = await users.AddClaimAsync(user, new Claim(type, value));
             if (!added.Succeeded) return added.ToError();
-            await access.InvalidateAsync(user.Id, ct);
+            await access.InvalidateAsync(user.Id, cancellationToken);
             LogUserClaimsChanged(logger, actor.UserId, user.Id, "added", type, value);
         }
 
-        return await ToDetailAsync(user, ct);
+        return await ToDetailAsync(user, cancellationToken);
     }
 
-    public async Task<Result<UserDetailDto>> RemoveClaimAsync(Actor actor, Guid id, ClaimDto claim, CancellationToken ct)
+    public async Task<Result<UserDetailDto>> RemoveClaimAsync(Actor actor, Guid id, ClaimDto claim, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -219,12 +241,12 @@ internal sealed partial class UserAdminService(
         var removed = await users.RemoveClaimAsync(user, existing);
         if (!removed.Succeeded) return removed.ToError();
 
-        await access.InvalidateAsync(user.Id, ct);
+        await access.InvalidateAsync(user.Id, cancellationToken);
         LogUserClaimsChanged(logger, actor.UserId, user.Id, "removed", type, value);
-        return await ToDetailAsync(user, ct);
+        return await ToDetailAsync(user, cancellationToken);
     }
 
-    public async Task<Result> ResetPasswordAsync(Actor actor, Guid id, string newPassword, CancellationToken ct)
+    public async Task<Result> ResetPasswordAsync(Actor actor, Guid id, string newPassword, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -244,13 +266,13 @@ internal sealed partial class UserAdminService(
         user.AccessFailedCount = 0;
         await users.UpdateSecurityStampAsync(user); // saves the user, and invalidates issued access tokens
 
-        await db.RefreshTokens.RevokeUserSessionsAsync(user.Id, clock.GetUtcNow(), ct);
-        await access.InvalidateAsync(user.Id, ct);
+        await dbContext.RefreshTokens.RevokeUserSessionsAsync(user.Id, clock.GetUtcNow(), cancellationToken);
+        await access.InvalidateAsync(user.Id, cancellationToken);
         LogUserPasswordReset(logger, actor.UserId, user.Id);
         return Result.Success();
     }
 
-    public async Task<Result> UnlockAsync(Actor actor, Guid id, CancellationToken ct)
+    public async Task<Result> UnlockAsync(Actor actor, Guid id, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -262,20 +284,20 @@ internal sealed partial class UserAdminService(
         return Result.Success();
     }
 
-    public async Task<Result> RevokeSessionsAsync(Actor actor, Guid id, CancellationToken ct)
+    public async Task<Result> RevokeSessionsAsync(Actor actor, Guid id, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
         var user = target.Value.User;
 
-        var revoked = await db.RefreshTokens.RevokeUserSessionsAsync(user.Id, clock.GetUtcNow(), ct);
+        var revoked = await dbContext.RefreshTokens.RevokeUserSessionsAsync(user.Id, clock.GetUtcNow(), cancellationToken);
         await users.UpdateSecurityStampAsync(user);
-        await access.InvalidateAsync(user.Id, ct);
+        await access.InvalidateAsync(user.Id, cancellationToken);
         LogUserSessionsRevoked(logger, actor.UserId, user.Id, revoked);
         return Result.Success();
     }
 
-    public async Task<Result> DeleteAsync(Actor actor, Guid id, CancellationToken ct)
+    public async Task<Result> DeleteAsync(Actor actor, Guid id, CancellationToken cancellationToken)
     {
         var target = await LoadManageableAsync(actor, id);
         if (!target.IsSuccess) return target.Error;
@@ -285,7 +307,7 @@ internal sealed partial class UserAdminService(
         var deleted = await users.DeleteAsync(user);
         if (!deleted.Succeeded) return deleted.ToError();
 
-        await access.InvalidateAsync(id, ct);
+        await access.InvalidateAsync(id, cancellationToken);
         LogUserDeleted(logger, actor.UserId, id);
         return Result.Success();
     }
@@ -329,27 +351,27 @@ internal sealed partial class UserAdminService(
 
     private static string Canonical(string role) => AppRoles.Find(role)?.Name ?? role;
 
-    private async Task<Dictionary<Guid, IReadOnlyList<string>>> RolesByUserAsync(List<Guid> userIds, CancellationToken ct)
+    private async Task<Dictionary<Guid, IReadOnlyList<string>>> RolesByUserAsync(List<Guid> userIds, CancellationToken cancellationToken)
     {
         var pairs = await (
-            from userRole in db.UserRoles
-            join role in db.Roles on userRole.RoleId equals role.Id
+            from userRole in dbContext.UserRoles
+            join role in dbContext.Roles on userRole.RoleId equals role.Id
             where userIds.Contains(userRole.UserId)
-            select new { userRole.UserId, role.Name }).ToListAsync(ct);
+            select new { userRole.UserId, role.Name }).ToListAsync(cancellationToken);
 
         return pairs.GroupBy(p => p.UserId).ToDictionary(
             g => g.Key,
             g => (IReadOnlyList<string>)g.Select(p => p.Name!).OrderByDescending(AppRoles.RankOf).ToList());
     }
 
-    private async Task<UserDetailDto> ToDetailAsync(AppUser user, CancellationToken ct)
+    private async Task<UserDetailDto> ToDetailAsync(AppUser user, CancellationToken cancellationToken)
     {
         var roles = (await users.GetRolesAsync(user)).OrderByDescending(AppRoles.RankOf).ToList();
         var claims = (await users.GetClaimsAsync(user))
             .Select(c => new ClaimDto(c.Type, c.Value))
             .OrderBy(c => c.Type, StringComparer.Ordinal).ThenBy(c => c.Value, StringComparer.Ordinal)
             .ToList();
-        var effective = (await access.GetAsync(user.Id, ct))?.Permissions ?? [];
+        var effective = (await access.GetAsync(user.Id, cancellationToken))?.Permissions ?? [];
 
         return new UserDetailDto(
             user.Id, user.Email ?? "", user.DisplayName, roles, user.IsActive,

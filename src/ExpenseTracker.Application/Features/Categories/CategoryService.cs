@@ -10,11 +10,11 @@ namespace ExpenseTracker.Application.Features.Categories;
 
 public interface ICategoryService
 {
-    Task<Result<PagedResult<CategoryDto>>> ListAsync(CategoryListRequest request, CancellationToken ct);
-    Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken ct);
-    Task<Result<CategoryDto>> CreateAsync(CategoryCommand command, CancellationToken ct);
-    Task<Result<CategoryDto>> UpdateAsync(int id, CategoryCommand command, CancellationToken ct);
-    Task<Result> DeleteAsync(int id, CancellationToken ct);
+    Task<Result<PagedResult<CategoryDto>>> ListAsync(CategoryListRequest request, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken cancellationToken);
+    Task<Result<CategoryDto>> CreateAsync(CategoryCommand command, CancellationToken cancellationToken);
+    Task<Result<CategoryDto>> UpdateAsync(int id, CategoryCommand command, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(int id, CancellationToken cancellationToken);
 }
 
 internal sealed partial class CategoryService(
@@ -24,21 +24,21 @@ internal sealed partial class CategoryService(
     IChangeNotifier notifier,
     ILogger<CategoryService> logger) : ICategoryService
 {
-    public async Task<Result<PagedResult<CategoryDto>>> ListAsync(CategoryListRequest request, CancellationToken ct)
+    public async Task<Result<PagedResult<CategoryDto>>> ListAsync(CategoryListRequest request, CancellationToken cancellationToken)
     {
         var sort = Paging.ResolveSort(request.SortBy, request.SortDir, CategorySorting.Default, defaultDescending: false, CategorySorting.Fields);
         if (!sort.IsSuccess) return sort.Error;
 
-        var page = await queries.ListAsync(request.Search?.Trim(), request.Page, sort.Value, ct);
+        var page = await queries.ListAsync(request.Search?.Trim(), request.Page, sort.Value, cancellationToken);
         LogCategoriesListed(logger, page.Items.Count, page.TotalCount, page.Page, page.PageSize, sort.Value.Field);
         return page;
     }
 
-    public Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken ct) => queries.LookupAsync(ct);
+    public Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken cancellationToken) => queries.LookupAsync(cancellationToken);
 
-    public async Task<Result<CategoryDto>> CreateAsync(CategoryCommand command, CancellationToken ct)
+    public async Task<Result<CategoryDto>> CreateAsync(CategoryCommand command, CancellationToken cancellationToken)
     {
-        if (await categories.NameExistsAsync(Category.NormalizeName(command.Name), excludeId: null, ct))
+        if (await categories.NameExistsAsync(Category.NormalizeName(command.Name), excludeId: null, cancellationToken))
             return CategoryErrors.DuplicateName;
 
         var created = Category.Create(command.Name, command.Color, command.MonthlyBudget);
@@ -46,46 +46,46 @@ internal sealed partial class CategoryService(
         var category = created.Value;
 
         categories.Add(category);
-        await unitOfWork.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         LogCategoryCreated(logger, category.Id, category.Name, category.MonthlyBudget);
-        await notifier.CategoriesChangedAsync(ChangeAction.Created, [category.Id], ct);
+        await notifier.CategoriesChangedAsync(ChangeAction.Created, [category.Id], cancellationToken);
         return ToDto(category, expenseCount: 0);
     }
 
-    public async Task<Result<CategoryDto>> UpdateAsync(int id, CategoryCommand command, CancellationToken ct)
+    public async Task<Result<CategoryDto>> UpdateAsync(int id, CategoryCommand command, CancellationToken cancellationToken)
     {
-        var category = await categories.GetByIdAsync(id, ct);
+        var category = await categories.GetByIdAsync(id, cancellationToken);
         if (category is null)
         {
             LogCategoryNotFound(logger, id);
             return CategoryErrors.NotFound(id);
         }
 
-        if (await categories.NameExistsAsync(Category.NormalizeName(command.Name), excludeId: id, ct))
+        if (await categories.NameExistsAsync(Category.NormalizeName(command.Name), excludeId: id, cancellationToken))
             return CategoryErrors.DuplicateName;
 
         var previous = (category.Name, category.MonthlyBudget);
         var updated = category.Update(command.Name, command.Color, command.MonthlyBudget);
         if (!updated.IsSuccess) return updated.Error;
-        await unitOfWork.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         LogCategoryUpdated(logger, category.Id, previous.Name, category.Name, previous.MonthlyBudget, category.MonthlyBudget);
-        await notifier.CategoriesChangedAsync(ChangeAction.Updated, [category.Id], ct);
+        await notifier.CategoriesChangedAsync(ChangeAction.Updated, [category.Id], cancellationToken);
 
-        return ToDto(category, await categories.CountExpensesAsync(id, ct));
+        return ToDto(category, await categories.CountExpensesAsync(id, cancellationToken));
     }
 
-    public async Task<Result> DeleteAsync(int id, CancellationToken ct)
+    public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        var category = await categories.GetByIdAsync(id, ct);
+        var category = await categories.GetByIdAsync(id, cancellationToken);
         if (category is null)
         {
             LogCategoryNotFound(logger, id);
             return CategoryErrors.NotFound(id);
         }
 
-        var expenseCount = await categories.CountExpensesAsync(id, ct);
+        var expenseCount = await categories.CountExpensesAsync(id, cancellationToken);
         if (expenseCount > 0)
         {
             LogCategoryInUse(logger, category.Id, category.Name, expenseCount);
@@ -93,10 +93,10 @@ internal sealed partial class CategoryService(
         }
 
         categories.Remove(category);
-        await unitOfWork.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         LogCategoryDeleted(logger, category.Id, category.Name);
-        await notifier.CategoriesChangedAsync(ChangeAction.Deleted, [category.Id], ct);
+        await notifier.CategoriesChangedAsync(ChangeAction.Deleted, [category.Id], cancellationToken);
         return Result.Success();
     }
 

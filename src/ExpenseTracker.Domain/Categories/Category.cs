@@ -8,7 +8,11 @@ namespace ExpenseTracker.Domain.Categories;
 public sealed partial class Category : Entity
 {
     public const int NameMaxLength = 50;
-    public const decimal MaxBudget = 999_999_999m;
+    public const int MaxWholeBudget = 999_999_999;
+    public const decimal MaxBudget = MaxWholeBudget;
+
+    /// <summary>A six-digit hex colour such as <c>#4f46e5</c>.</summary>
+    public const string HexColorPattern = "^#[0-9a-fA-F]{6}$";
 
     private readonly List<Expense> _expenses = [];
 
@@ -54,6 +58,6 @@ public sealed partial class Category : Entity
         return Result.Success();
     }
 
-    [GeneratedRegex("^#[0-9a-fA-F]{6}$")]
+    [GeneratedRegex(HexColorPattern)]
     private static partial Regex HexColor();
 }

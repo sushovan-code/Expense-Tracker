@@ -1,8 +1,5 @@
 namespace ExpenseTracker.Application.Security;
 
-/// <summary>One grantable permission, as shown in the admin UI.</summary>
-public sealed record PermissionInfo(string Name, string Group, string Description);
-
 /// <summary>
 /// The permission catalog: the single source of truth for what can be granted. Endpoints require
 /// permissions (never roles) so a role's abilities can be changed by editing its permission set

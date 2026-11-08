@@ -1,43 +1,7 @@
-using System.Collections.Concurrent;
-using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ExpenseTracker.Api.Realtime;
-
-// ---- Wire contracts (server → client). Method names are the client-side event names. ----
-
-/// <param name="Action">created | updated | deleted</param>
-/// <param name="OriginClientId">The browser tab that caused the change (X-Client-Id), so it can skip its own echo.</param>
-public sealed record ChangeNotice(string Action, IReadOnlyCollection<int> Ids, string? OriginClientId);
-
-public sealed record PresenceUpdate(int Online);
-
-public interface IExpenseHubClient
-{
-    Task ExpensesChanged(ChangeNotice notice);
-    Task CategoriesChanged(ChangeNotice notice);
-    Task BudgetExceeded(BudgetAlert alert);
-    Task PresenceChanged(PresenceUpdate update);
-}
-
-/// <summary>Tracks open connections so every client can show how many sessions are live.</summary>
-public sealed class PresenceTracker
-{
-    private readonly ConcurrentDictionary<string, byte> _connections = new();
-
-    public int Add(string connectionId)
-    {
-        _connections.TryAdd(connectionId, 0);
-        return _connections.Count;
-    }
-
-    public int Remove(string connectionId)
-    {
-        _connections.TryRemove(connectionId, out _);
-        return _connections.Count;
-    }
-}
 
 /// <summary>
 /// Push-only hub: clients listen for change notifications; all writes still go through the REST API

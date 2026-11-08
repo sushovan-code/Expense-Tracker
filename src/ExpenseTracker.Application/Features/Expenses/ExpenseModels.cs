@@ -42,6 +42,13 @@ public sealed record ExpenseSummary(
     IReadOnlyList<CategoryTotal> ByCategory,
     IReadOnlyList<MonthTotal> ByMonth);
 
+/// <summary>Limits on exporting expenses.</summary>
+public static class ExpenseExport
+{
+    /// <summary>Most rows one export may contain; narrower filters are required beyond this.</summary>
+    public const int MaxRows = 10_000;
+}
+
 public static class ExpenseSorting
 {
     public const string Default = "date";

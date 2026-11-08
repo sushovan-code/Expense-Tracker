@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ExpenseTracker.Api.Auth;
 using ExpenseTracker.Api.Configuration;
 using ExpenseTracker.Api.Endpoints;
@@ -5,6 +7,8 @@ using ExpenseTracker.Api.Middleware;
 using ExpenseTracker.Api.Realtime;
 using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
+using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using OpenTelemetry.Trace;
 
@@ -15,6 +19,9 @@ internal static partial class DependencyInjection
     /// <summary>HTTP/realtime presentation concerns: problem details, authentication/authorization, OpenAPI, CORS, SignalR and its notifier.</summary>
     public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
+        // JSON: enums travel as camelCase strings ("exceeded", not 2), per the naming conventions.
+        services.ConfigureHttpJsonOptions(options =>
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
         services.AddValidation();
         services.AddProblemDetails(options => options.CustomizeProblemDetails = ProblemDetailsSetup.Customize);
         services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -63,16 +70,28 @@ internal static partial class DependencyInjection
             return Task.CompletedTask;
         }));
 
+        services.AddOptions<FeatureOptions>().Bind(configuration.GetSection(FeatureOptions.Section)).ValidateOnStart();
+        services.AddOptions<CorsPolicyOptions>()
+            .Bind(configuration.GetSection(CorsPolicyOptions.Section))
+            .Validate(options => options.AllowedOrigins.All(IsAbsoluteHttpOrigin),
+                $"{CorsPolicyOptions.Section}:AllowedOrigins must contain absolute http(s) origins only.")
+            .ValidateOnStart();
+
         // Credentials are required for SignalR when the client is on another origin.
-        services.AddCors(options => options.AddPolicy(CorsSettings.PolicyName, policy =>
-            policy.WithOrigins(configuration.GetSection(CorsSettings.Section).Get<CorsSettings>()?.AllowedOrigins ?? [])
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials()
-                .WithExposedHeaders("Content-Disposition")));
+        services.AddCors();
+        services.AddOptions<Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions>()
+            .Configure<IOptions<CorsPolicyOptions>>((cors, origins) => cors.AddPolicy(CorsPolicyOptions.PolicyName, policy =>
+                policy.WithOrigins(origins.Value.AllowedOrigins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials()
+                    .WithExposedHeaders(HeaderNames.ContentDisposition)));
 
         return services;
     }
+
+    private static bool IsAbsoluteHttpOrigin(string origin) =>
+        Uri.TryCreate(origin, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     public static IEndpointRouteBuilder MapApiEndpoints(this IEndpointRouteBuilder app)
     {
@@ -92,8 +111,8 @@ internal static partial class DependencyInjection
 
     public static void LogStartupConfiguration(this WebApplication app, FeatureOptions features)
     {
-        var origins = app.Configuration.GetSection(CorsSettings.Section).Get<CorsSettings>()?.AllowedOrigins ?? [];
-        LogStartup(app.Logger, app.Environment.EnvironmentName, features.ApiDocs, features.MigrateDatabaseOnStartup,
+        var origins = app.Services.GetRequiredService<IOptions<CorsPolicyOptions>>().Value.AllowedOrigins;
+        LogStartup(app.Logger, app.Environment.EnvironmentName, features.IsApiDocsEnabled, features.ShouldMigrateDatabaseOnStartup,
             string.Join(", ", origins), !string.IsNullOrWhiteSpace(app.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]));
     }
 
