@@ -16,10 +16,16 @@ internal sealed class UserAccessProvider(AppDbContext db, HybridCache cache) : I
 {
     private const string Tag = "user-access";
 
+    /// <summary>Bump when the cached <see cref="UserAccess"/> shape changes.</summary>
+    private const int KeyVersion = 1;
+
+    /// <summary>A safety net only: every identity change invalidates the entry straight away.</summary>
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(10);
+
     private static readonly HybridCacheEntryOptions EntryOptions = new()
     {
-        Expiration = TimeSpan.FromMinutes(10),
-        LocalCacheExpiration = TimeSpan.FromMinutes(10),
+        Expiration = CacheLifetime,
+        LocalCacheExpiration = CacheLifetime,
     };
 
     private static readonly IReadOnlyList<string> AllPermissions = Permissions.All.Select(p => p.Name).ToArray();
@@ -37,7 +43,7 @@ internal sealed class UserAccessProvider(AppDbContext db, HybridCache cache) : I
 
     public async Task InvalidateAllAsync(CancellationToken ct) => await cache.RemoveByTagAsync(Tag, ct);
 
-    private static string Key(Guid userId) => $"{Tag}:{userId:N}";
+    private static string Key(Guid userId) => $"expensetracker:{Tag}:{userId:N}:v{KeyVersion}";
 
     private static async Task<UserAccess?> LoadAsync(AppDbContext db, Guid userId, CancellationToken ct)
     {

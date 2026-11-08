@@ -2,14 +2,15 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Features.Identity;
+using ExpenseTracker.Application.Security;
 
 namespace ExpenseTracker.Api.Contracts;
 
 // ---- Authentication ----------------------------------------------------------------------------
 
 public sealed record LoginRequest(
-    [property: Required, EmailAddress, StringLength(256)] string Email,
-    [property: Required, StringLength(128)] string Password)
+    [property: Required, EmailAddress, StringLength(ContractLimits.EmailMaxLength)] string Email,
+    [property: Required, StringLength(CredentialLimits.PasswordMaxLength)] string Password)
 {
     public LoginCommand ToCommand() => new(Email, Password);
 }
@@ -24,19 +25,19 @@ public sealed record AuthResponse(string AccessToken, string TokenType, int Expi
 }
 
 public sealed record ChangePasswordRequest(
-    [property: Required, StringLength(128)] string CurrentPassword,
-    [property: Required, StringLength(128, MinimumLength = 10)] string NewPassword)
+    [property: Required, StringLength(CredentialLimits.PasswordMaxLength)] string CurrentPassword,
+    [property: Required, StringLength(CredentialLimits.PasswordMaxLength, MinimumLength = CredentialLimits.PasswordMinLength)] string NewPassword)
 {
     public ChangePasswordCommand ToCommand() => new(CurrentPassword, NewPassword);
 }
 
 public sealed record CreateApiKeyRequest(
-    [property: Required, StringLength(100, MinimumLength = 1), Description("Label to recognise the key by.")]
+    [property: Required, StringLength(CredentialLimits.ApiKeyNameMaxLength, MinimumLength = 1), Description("Label to recognise the key by.")]
     string Name,
     [property: Description("Permissions to limit the key to (must be ones you hold). Omit for all of yours.")]
     string[]? Scopes,
-    [property: Range(1, 365), Description("Days until the key expires (default 90).")]
-    int ExpiresInDays = 90)
+    [property: Range(CredentialLimits.ApiKeyMinLifetimeDays, CredentialLimits.ApiKeyMaxLifetimeDays), Description("Days until the key expires (default 90).")]
+    int ExpiresInDays = CredentialLimits.ApiKeyDefaultLifetimeDays)
 {
     public CreateApiKeyCommand ToCommand() => new(Name, Scopes, ExpiresInDays);
 }
@@ -55,17 +56,17 @@ public sealed record UserListQuery(
 }
 
 public sealed record CreateUserRequest(
-    [property: Required, EmailAddress, StringLength(256)] string Email,
-    [property: Required, StringLength(100, MinimumLength = 1)] string DisplayName,
-    [property: Required, StringLength(128, MinimumLength = 10)] string Password,
+    [property: Required, EmailAddress, StringLength(ContractLimits.EmailMaxLength)] string Email,
+    [property: Required, StringLength(ContractLimits.DisplayNameMaxLength, MinimumLength = 1)] string DisplayName,
+    [property: Required, StringLength(CredentialLimits.PasswordMaxLength, MinimumLength = CredentialLimits.PasswordMinLength)] string Password,
     [property: Required, MinLength(1)] string[] Roles)
 {
     public CreateUserCommand ToCommand() => new(Email, DisplayName, Password, Roles);
 }
 
 public sealed record UpdateUserRequest(
-    [property: Required, EmailAddress, StringLength(256)] string Email,
-    [property: Required, StringLength(100, MinimumLength = 1)] string DisplayName,
+    [property: Required, EmailAddress, StringLength(ContractLimits.EmailMaxLength)] string Email,
+    [property: Required, StringLength(ContractLimits.DisplayNameMaxLength, MinimumLength = 1)] string DisplayName,
     [property: Description("False disables sign-in and ends the user's sessions and API keys.")] bool IsActive)
 {
     public UpdateUserCommand ToCommand() => new(Email, DisplayName, IsActive);
@@ -74,13 +75,13 @@ public sealed record UpdateUserRequest(
 public sealed record SetUserRolesRequest([property: Required, MinLength(1)] string[] Roles);
 
 public sealed record UserClaimRequest(
-    [property: Required, StringLength(256, MinimumLength = 1), Description("e.g. permission, department.")] string Type,
-    [property: Required, StringLength(1024, MinimumLength = 1)] string Value)
+    [property: Required, StringLength(ContractLimits.ClaimTypeMaxLength, MinimumLength = 1), Description("e.g. permission, department.")] string Type,
+    [property: Required, StringLength(ContractLimits.ClaimValueMaxLength, MinimumLength = 1)] string Value)
 {
     public ClaimDto ToClaim() => new(Type, Value);
 }
 
-public sealed record ResetPasswordRequest([property: Required, StringLength(128, MinimumLength = 10)] string NewPassword);
+public sealed record ResetPasswordRequest([property: Required, StringLength(CredentialLimits.PasswordMaxLength, MinimumLength = CredentialLimits.PasswordMinLength)] string NewPassword);
 
 // ---- Role administration -----------------------------------------------------------------------
 

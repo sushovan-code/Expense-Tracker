@@ -26,7 +26,7 @@ internal static class ExpenseEndpoints
             .RequirePermission(Permissions.Expenses.Export)
             .WithName("ExportExpenses")
             .WithSummary("Export expenses as CSV")
-            .WithDescription("Same filters and sort as the list, without paging (up to 10,000 rows).")
+            .WithDescription($"Same filters and sort as the list, without paging (up to {ExpenseExport.MaxRows:N0} rows).")
             .Produces(StatusCodes.Status200OK, contentType: "text/csv")
             .ProducesValidationProblem();
 

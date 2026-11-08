@@ -2,17 +2,18 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ExpenseTracker.Application.Common;
 using ExpenseTracker.Application.Features.Categories;
+using ExpenseTracker.Domain.Categories;
 
 namespace ExpenseTracker.Api.Contracts;
 
 public sealed record CategoryRequest(
-    [property: Required, StringLength(50, MinimumLength = 1), Description("Unique display name.")]
+    [property: Required, StringLength(Category.NameMaxLength, MinimumLength = 1), Description("Unique display name.")]
     string Name,
     [property: Required,
-               RegularExpression("^#[0-9a-fA-F]{6}$", ErrorMessage = "Color must be a hex value like #1a2b3c."),
+               RegularExpression(Category.HexColorPattern, ErrorMessage = "Color must be a hex value like #1a2b3c."),
                Description("Hex color, e.g. #4f46e5.")]
     string Color,
-    [property: Range(typeof(decimal), "0", "999999999"), Description("Optional monthly spending limit.")]
+    [property: Range(0, Category.MaxWholeBudget), Description("Optional monthly spending limit.")]
     decimal? MonthlyBudget)
 {
     public CategoryCommand ToCommand() => new(Name, Color, MonthlyBudget);
@@ -29,5 +30,5 @@ public sealed record CategoryListQuery(
 }
 
 public sealed record BudgetQuery(
-    [property: Range(2000, 2100), Description("Year (defaults to the current year).")] int? Year,
-    [property: Range(1, 12), Description("Month 1–12 (defaults to the current month).")] int? Month);
+    [property: Range(ContractLimits.MinBudgetYear, ContractLimits.MaxBudgetYear), Description("Year (defaults to the current year).")] int? Year,
+    [property: Range(ContractLimits.FirstMonth, ContractLimits.LastMonth), Description("Month 1–12 (defaults to the current month).")] int? Month);

@@ -33,8 +33,6 @@ internal sealed partial class ExpenseService(
     TimeProvider clock,
     ILogger<ExpenseService> logger) : IExpenseService
 {
-    internal const int MaxExportRows = 10_000;
-
     public async Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken ct)
     {
         if (!IsValidRange(request.Filter)) return ExpenseErrors.InvalidDateRange;
@@ -56,8 +54,8 @@ internal sealed partial class ExpenseService(
         var sort = Paging.ResolveSort(sortBy, sortDir, ExpenseSorting.Default, defaultDescending: true, ExpenseSorting.Fields);
         if (!sort.IsSuccess) return sort.Error;
 
-        var rows = await queries.ListAllAsync(filter, sort.Value, MaxExportRows + 1, ct);
-        if (rows.Count > MaxExportRows) return ExpenseErrors.ExportTooLarge(MaxExportRows);
+        var rows = await queries.ListAllAsync(filter, sort.Value, ExpenseExport.MaxRows + 1, ct);
+        if (rows.Count > ExpenseExport.MaxRows) return ExpenseErrors.ExportTooLarge(ExpenseExport.MaxRows);
 
         LogExpensesExported(logger, rows.Count, filter.IsFiltered);
         return Result<IReadOnlyList<ExpenseDto>>.Success(rows);

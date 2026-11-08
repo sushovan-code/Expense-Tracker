@@ -135,7 +135,7 @@ public class ExpenseServiceTests
     public async Task Export_refuses_more_rows_than_the_limit()
     {
         _queries.ListAllAsync(Arg.Any<ExpenseFilter>(), Arg.Any<SortSpec>(), Arg.Any<int>(), Ct)
-            .Returns(Enumerable.Repeat(SampleDto(), ExpenseService.MaxExportRows + 1).ToList());
+            .Returns(Enumerable.Repeat(SampleDto(), ExpenseExport.MaxRows + 1).ToList());
 
         var result = await _service.ExportAsync(ExpenseFilter.None, null, null, Ct);
 

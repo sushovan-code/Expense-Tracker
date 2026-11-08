@@ -20,8 +20,6 @@ internal sealed partial class ApiKeyService(
     ILogger<ApiKeyService> logger) : IApiKeyService
 {
     private const string Marker = "etk_";
-    private const int MaxActiveKeysPerUser = 10;
-    private const int MaxLifetimeDays = 365;
     private static readonly TimeSpan LastUsedResolution = TimeSpan.FromMinutes(5);
 
     public async Task<IReadOnlyList<ApiKeyDto>> ListAsync(Guid userId, CancellationToken ct)
@@ -37,16 +35,16 @@ internal sealed partial class ApiKeyService(
     {
         var name = command.Name.Trim();
         if (name.Length is 0 or > 100) return Error.Validation("name", "Name must be 1–100 characters.");
-        if (command.ExpiresInDays is < 1 or > MaxLifetimeDays)
-            return Error.Validation("expiresInDays", $"Keys must expire within 1–{MaxLifetimeDays} days.");
+        if (command.ExpiresInDays is < CredentialLimits.ApiKeyMinLifetimeDays or > CredentialLimits.ApiKeyMaxLifetimeDays)
+            return Error.Validation("expiresInDays", $"Keys must expire within {CredentialLimits.ApiKeyMinLifetimeDays}–{CredentialLimits.ApiKeyMaxLifetimeDays} days.");
 
         var scopes = (command.Scopes ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
         if (AccessPolicy.CanGrantPermissions(actor, scopes, field: "scopes") is { } denied) return denied;
 
         var now = clock.GetUtcNow();
         var active = await db.ApiKeys.CountAsync(k => k.UserId == actor.UserId && k.RevokedAt == null && k.ExpiresAt > now, ct);
-        if (active >= MaxActiveKeysPerUser)
-            return Error.Conflict("Too many API keys", $"You can have at most {MaxActiveKeysPerUser} active API keys. Revoke one first.");
+        if (active >= CredentialLimits.MaxActiveApiKeysPerUser)
+            return Error.Conflict("Too many API keys", $"You can have at most {CredentialLimits.MaxActiveApiKeysPerUser} active API keys. Revoke one first.");
 
         var prefix = Marker + SecureTokens.Generate(6);
         var key = $"{prefix}_{SecureTokens.Generate(32)}";
