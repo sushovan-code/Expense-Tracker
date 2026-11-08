@@ -31,7 +31,6 @@ export function LoginPage() {
           </span>
           <span className="brand__name">Expense Tracker</span>
           {ENV_LABEL && <span className="env-badge">{ENV_LABEL}</span>}
-          <SignInQrButton />
         </div>
 
         <h1 id="login-title" className="auth-card__title">Sign in</h1>
@@ -76,6 +75,8 @@ export function LoginPage() {
             <LockIcon size={16} /> {vm.submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <SignInQrButton />
 
         {import.meta.env.DEV && (
           <div className="demo-accounts">

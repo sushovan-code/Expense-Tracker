@@ -13,7 +13,7 @@ A full-stack expense tracker built with React, TypeScript and Vite on the fronte
 - **Categories grid**: paged, sortable and searchable, with inline editing of name, color and **monthly budget**. A category that still has expenses can't be deleted.
 - **Budgets**: an optional monthly limit per category. The dashboard shows each budget as on track, close to the limit (80% or more) or over budget. When an expense pushes a category over its limit, every open session gets an alert.
 - **Realtime (SignalR)**: changes made in one tab or by one user appear everywhere else immediately, with a notification. The header shows the live connection state and how many sessions are online. The client reconnects automatically and refreshes whatever it might have missed.
-- **Open on your phone**: a QR icon on the sign-in card shows a QR code of the sign-in page. Scan it with a phone camera to open the app there and sign in as usual. It follows the light and dark themes.
+- **Open on your phone**: the **Open on your phone** button under the sign-in form shows a large QR code of the sign-in page, with the app logo in the centre. Scan it with a phone camera to open the app there and sign in as usual. The code is always dark on white, in both themes, so cameras read it reliably.
 - **Themes**: Light, Dark or System. The choice is saved in `localStorage`. System mode follows OS changes live, and the saved theme is applied before first paint, so there's no flash of the wrong theme. Switching themes plays a circular reveal from the toggle (View Transitions API).
 - **UI**: an animated gradient-mesh background with frosted-glass surfaces, spring-animated modals (a bottom sheet on phones) with exit animations, staggered entrances, and count-up numbers. All motion respects `prefers-reduced-motion`.
 - **Notifications**: success, info, warning and error toasts. They auto-dismiss (pausing on hover), stack above open modals, and offer **Undo** after deleting an expense.
@@ -69,7 +69,7 @@ Then open http://localhost:5010. The Vite dev server proxies `/api` requests to 
 3. Start the API as above, then the client with `npm run dev -- --host`. Allow Node.js through Windows Firewall on private networks if asked.
 4. Open http://localhost:5010, select the QR icon on the sign-in card, and scan it with your phone.
 
-The phone talks only to Vite, which proxies `/api` and `/hubs` to the API, so no CORS change is needed. Aspire (option A) doesn't start Vite with `--host`; use option B for phone testing.
+The phone talks only to Vite, which proxies `/api` and `/hubs` to the API, so no CORS change is needed. Aspire (option A) doesn't start Vite with `--host`, so its QR code shows a `localhost` address (the dialog says so); use option B for phone testing.
 
 > If PowerShell reports that `npm.ps1` is not digitally signed, use `npm.cmd run dev` instead, or run
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.

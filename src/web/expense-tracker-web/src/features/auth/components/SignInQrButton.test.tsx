@@ -13,6 +13,15 @@ describe('SignInQrButton', () => {
     expect(screen.getByRole('heading', { name: 'Open on your phone' })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'QR code for http://192.168.1.20:5010/login' })).toBeInTheDocument()
     expect(screen.getByText('http://192.168.1.20:5010/login')).toBeInTheDocument()
+    expect(screen.queryByText(/only works on this computer/)).not.toBeInTheDocument()
+  })
+
+  it('warns that a localhost address cannot be opened from a phone', async () => {
+    renderWithProviders(<SignInQrButton publicUrl="http://localhost:5010" />, { user: null })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open on your phone' }))
+
+    expect(screen.getByText(/only works on this computer/)).toBeInTheDocument()
   })
 })
 
