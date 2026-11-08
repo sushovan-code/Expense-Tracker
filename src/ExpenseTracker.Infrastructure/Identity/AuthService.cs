@@ -15,7 +15,7 @@ internal sealed partial class AuthService(
     AppDbContext db,
     IAccessTokenIssuer tokens,
     IUserAccessProvider access,
-    IOptions<IdentitySettings> settings,
+    IOptions<IdentityStoreOptions> settings,
     TimeProvider clock,
     ILogger<AuthService> logger) : IAuthService
 {
@@ -181,7 +181,7 @@ internal sealed partial class AuthService(
 
     private Error LockedOut(AppUser user)
     {
-        var minutes = user.LockoutEnd is { } end ? Math.Max(1, (int)Math.Ceiling((end - clock.GetUtcNow()).TotalMinutes)) : 15;
+        var minutes = user.LockoutEnd is { } end ? Math.Max(1, (int)Math.Ceiling((end - clock.GetUtcNow()).TotalMinutes)) : (int)IdentityRules.LockoutDuration.TotalMinutes;
         return Error.Unauthorized("Account locked",
             $"Too many failed sign-in attempts. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}.");
     }

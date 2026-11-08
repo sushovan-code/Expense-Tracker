@@ -17,7 +17,7 @@ public sealed partial class IdentitySeeder(
     UserManager<AppUser> users,
     RoleManager<AppRole> roles,
     AppDbContext db,
-    IOptions<IdentitySettings> settings,
+    IOptions<IdentityStoreOptions> settings,
     TimeProvider clock,
     ILogger<IdentitySeeder> logger)
 {
@@ -36,7 +36,7 @@ public sealed partial class IdentitySeeder(
             usersCreated++;
         }
 
-        if (seed.DemoUsers && !string.IsNullOrWhiteSpace(seed.AdminEmail) && !string.IsNullOrWhiteSpace(seed.DemoPassword))
+        if (seed.ShouldSeedDemoUsers && !string.IsNullOrWhiteSpace(seed.AdminEmail) && !string.IsNullOrWhiteSpace(seed.DemoPassword))
         {
             var domain = seed.AdminEmail[(seed.AdminEmail.IndexOf('@') + 1)..];
             foreach (var role in new[] { AppRoles.Admin, AppRoles.User, AppRoles.Reader })

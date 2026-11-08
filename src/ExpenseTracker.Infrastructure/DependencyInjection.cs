@@ -17,6 +17,9 @@ public static class DependencyInjection
 {
     public const string ConnectionStringName = "DefaultConnection";
 
+    private static readonly TimeSpan MinRefreshTokenLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan MaxRefreshTokenLifetime = TimeSpan.FromDays(90);
+
     /// <summary>Registers SQL Server persistence and the read-side queries behind the Application ports.</summary>
     /// <param name="environmentName">Used only to make a missing-configuration error actionable.</param>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, string environmentName)
@@ -58,19 +61,22 @@ public static class DependencyInjection
     /// </summary>
     private static void AddIdentityStore(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptions<IdentitySettings>().Bind(configuration.GetSection(IdentitySettings.Section));
+        services.AddOptions<IdentityStoreOptions>()
+            .Bind(configuration.GetSection(IdentityStoreOptions.Section))
+            .Validate(options => options.RefreshTokenLifetime >= MinRefreshTokenLifetime && options.RefreshTokenLifetime <= MaxRefreshTokenLifetime,
+                $"{IdentityStoreOptions.Section}:RefreshTokenLifetime must be between {MinRefreshTokenLifetime} and {MaxRefreshTokenLifetime}.")
+            .ValidateOnStart();
 
         services.AddIdentityCore<AppUser>(options =>
             {
                 options.User.RequireUniqueEmail = true;
 
-                // Length over composition (NIST SP 800-63B), while keeping mixed case and a digit.
-                options.Password.RequiredLength = 10;
+                options.Password.RequiredLength = IdentityRules.MinPasswordLength;
                 options.Password.RequireNonAlphanumeric = false;
 
                 options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.MaxFailedAccessAttempts = IdentityRules.MaxFailedSignInAttempts;
+                options.Lockout.DefaultLockoutTimeSpan = IdentityRules.LockoutDuration;
             })
             .AddRoles<AppRole>()
             .AddEntityFrameworkStores<AppDbContext>();
