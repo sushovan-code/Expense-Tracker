@@ -12,7 +12,7 @@ namespace ExpenseTracker.Infrastructure.Identity;
 
 internal sealed partial class AuthService(
     UserManager<AppUser> users,
-    AppDbContext db,
+    AppDbContext dbContext,
     IAccessTokenIssuer tokens,
     IUserAccessProvider access,
     IOptions<IdentityStoreOptions> settings,
@@ -27,7 +27,7 @@ internal sealed partial class AuthService(
     private static readonly Lazy<string> DummyPasswordHash =
         new(() => new PasswordHasher<AppUser>().HashPassword(new AppUser(), Guid.NewGuid().ToString()));
 
-    public async Task<Result<AuthSession>> LoginAsync(LoginCommand command, string? ipAddress, CancellationToken ct)
+    public async Task<Result<AuthSession>> LoginAsync(LoginCommand command, string? ipAddress, CancellationToken cancellationToken)
     {
         var user = await users.FindByEmailAsync(command.Email.Trim());
         if (user is null)
@@ -69,20 +69,20 @@ internal sealed partial class AuthService(
         await users.UpdateAsync(user);
 
         // Housekeeping: this user's long-dead refresh tokens.
-        await db.RefreshTokens.Where(t => t.UserId == user.Id && t.ExpiresAt < now).ExecuteDeleteAsync(ct);
+        await dbContext.RefreshTokens.Where(t => t.UserId == user.Id && t.ExpiresAt < now).ExecuteDeleteAsync(cancellationToken);
 
         // A password check may have re-hashed the password, which rotates the security stamp.
-        await access.InvalidateAsync(user.Id, ct);
+        await access.InvalidateAsync(user.Id, cancellationToken);
 
-        var session = await IssueSessionAsync(user.Id, sessionId: Guid.CreateVersion7(), Guid.CreateVersion7(), ipAddress, ct);
+        var session = await IssueSessionAsync(user.Id, sessionId: Guid.CreateVersion7(), Guid.CreateVersion7(), ipAddress, cancellationToken);
         if (session.IsSuccess) LogLoginSucceeded(logger, user.Id, ipAddress);
         return session;
     }
 
-    public async Task<Result<AuthSession>> RefreshAsync(string refreshToken, string? ipAddress, CancellationToken ct)
+    public async Task<Result<AuthSession>> RefreshAsync(string refreshToken, string? ipAddress, CancellationToken cancellationToken)
     {
         var hash = SecureTokens.Hash(refreshToken);
-        var token = await db.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
+        var token = await dbContext.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
         if (token is null) return InvalidSession;
 
         var now = clock.GetUtcNow();
@@ -92,7 +92,7 @@ internal sealed partial class AuthService(
             {
                 // A rotated token was presented again: it was copied. Revoke the whole chain so
                 // neither the thief nor the victim can continue; the victim simply signs in again.
-                await db.RefreshTokens.RevokeSessionAsync(token.SessionId, now, ct);
+                await dbContext.RefreshTokens.RevokeSessionAsync(token.SessionId, now, cancellationToken);
                 LogRefreshTokenReuse(logger, token.UserId, token.SessionId, ipAddress);
             }
             return InvalidSession;
@@ -102,15 +102,15 @@ internal sealed partial class AuthService(
 
         // Claim the token atomically, so two concurrent refreshes can't both rotate it.
         var nextId = Guid.CreateVersion7();
-        var claimed = await db.RefreshTokens
+        var claimed = await dbContext.RefreshTokens
             .Where(t => t.Id == token.Id && t.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now).SetProperty(t => t.ReplacedById, nextId), ct);
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now).SetProperty(t => t.ReplacedById, nextId), cancellationToken);
         if (claimed == 0) return InvalidSession;
 
-        var session = await IssueSessionAsync(token.UserId, token.SessionId, nextId, ipAddress, ct);
+        var session = await IssueSessionAsync(token.UserId, token.SessionId, nextId, ipAddress, cancellationToken);
         if (!session.IsSuccess)
         {
-            await db.RefreshTokens.RevokeSessionAsync(token.SessionId, now, ct);
+            await dbContext.RefreshTokens.RevokeSessionAsync(token.SessionId, now, cancellationToken);
             return session;
         }
 
@@ -118,20 +118,20 @@ internal sealed partial class AuthService(
         return session;
     }
 
-    public async Task LogoutAsync(string? refreshToken, CancellationToken ct)
+    public async Task LogoutAsync(string? refreshToken, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(refreshToken)) return;
 
         var hash = SecureTokens.Hash(refreshToken);
-        var token = await db.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
+        var token = await dbContext.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
         if (token is null) return;
 
-        await db.RefreshTokens.RevokeSessionAsync(token.SessionId, clock.GetUtcNow(), ct);
+        await dbContext.RefreshTokens.RevokeSessionAsync(token.SessionId, clock.GetUtcNow(), cancellationToken);
         LogLoggedOut(logger, token.UserId, token.SessionId);
     }
 
     public async Task<Result> ChangePasswordAsync(
-        Guid userId, ChangePasswordCommand command, string? currentRefreshToken, CancellationToken ct)
+        Guid userId, ChangePasswordCommand command, string? currentRefreshToken, CancellationToken cancellationToken)
     {
         var user = await users.FindByIdAsync(userId.ToString());
         if (user is null) return Error.NotFound("User", userId);
@@ -144,26 +144,26 @@ internal sealed partial class AuthService(
         if (!string.IsNullOrEmpty(currentRefreshToken))
         {
             var hash = SecureTokens.Hash(currentRefreshToken);
-            keepSession = await db.RefreshTokens.Where(t => t.TokenHash == hash && t.UserId == userId)
-                .Select(t => (Guid?)t.SessionId).SingleOrDefaultAsync(ct);
+            keepSession = await dbContext.RefreshTokens.Where(t => t.TokenHash == hash && t.UserId == userId)
+                .Select(t => (Guid?)t.SessionId).SingleOrDefaultAsync(cancellationToken);
         }
 
-        await db.RefreshTokens.RevokeUserSessionsAsync(userId, clock.GetUtcNow(), ct, exceptSessionId: keepSession);
-        await access.InvalidateAsync(userId, ct);
+        await dbContext.RefreshTokens.RevokeUserSessionsAsync(userId, clock.GetUtcNow(), cancellationToken, exceptSessionId: keepSession);
+        await access.InvalidateAsync(userId, cancellationToken);
         LogPasswordChanged(logger, userId);
         return Result.Success();
     }
 
     private async Task<Result<AuthSession>> IssueSessionAsync(
-        Guid userId, Guid sessionId, Guid refreshTokenId, string? ipAddress, CancellationToken ct)
+        Guid userId, Guid sessionId, Guid refreshTokenId, string? ipAddress, CancellationToken cancellationToken)
     {
-        var user = await access.GetAsync(userId, ct);
+        var user = await access.GetAsync(userId, cancellationToken);
         if (user is null || !user.IsActive) return InvalidSession;
 
         var now = clock.GetUtcNow();
         var refreshToken = SecureTokens.Generate();
         var refreshExpiresAt = now + settings.Value.RefreshTokenLifetime;
-        db.RefreshTokens.Add(new RefreshToken
+        dbContext.RefreshTokens.Add(new RefreshToken
         {
             Id = refreshTokenId,
             UserId = userId,
@@ -173,7 +173,7 @@ internal sealed partial class AuthService(
             ExpiresAt = refreshExpiresAt,
             CreatedByIp = ipAddress,
         });
-        await db.SaveChangesAsync(ct);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         var accessToken = tokens.Issue(new AccessTokenSubject(userId, user.Email, user.DisplayName, user.SecurityStamp));
         return new AuthSession(accessToken.Token, accessToken.ExpiresAt, refreshToken, refreshExpiresAt, user.ToCurrentUser());

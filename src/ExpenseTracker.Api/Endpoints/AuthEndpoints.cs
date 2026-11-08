@@ -81,9 +81,9 @@ internal static class AuthEndpoints
     }
 
     private static async Task<Results<Ok<AuthResponse>, ProblemHttpResult>> Login(
-        LoginRequest request, IAuthService auth, HttpContext http, TimeProvider clock, CancellationToken ct)
+        LoginRequest request, IAuthService auth, HttpContext http, TimeProvider clock, CancellationToken cancellationToken)
     {
-        var result = await auth.LoginAsync(request.ToCommand(), http.Connection.RemoteIpAddress?.ToString(), ct);
+        var result = await auth.LoginAsync(request.ToCommand(), http.Connection.RemoteIpAddress?.ToString(), cancellationToken);
         return result.ToHttpResult(session =>
         {
             RefreshTokenCookie.Write(http, session.RefreshToken, session.RefreshTokenExpiresAt);
@@ -92,13 +92,13 @@ internal static class AuthEndpoints
     }
 
     private static async Task<Results<Ok<AuthResponse>, ProblemHttpResult>> Refresh(
-        IAuthService auth, HttpContext http, TimeProvider clock, CancellationToken ct)
+        IAuthService auth, HttpContext http, TimeProvider clock, CancellationToken cancellationToken)
     {
         var token = RefreshTokenCookie.Read(http);
         if (string.IsNullOrEmpty(token))
             return TypedResults.Problem(title: "Not signed in", detail: "There is no session to refresh.", statusCode: StatusCodes.Status401Unauthorized);
 
-        var result = await auth.RefreshAsync(token, http.Connection.RemoteIpAddress?.ToString(), ct);
+        var result = await auth.RefreshAsync(token, http.Connection.RemoteIpAddress?.ToString(), cancellationToken);
         if (!result.IsSuccess) RefreshTokenCookie.Clear(http);
 
         return result.ToHttpResult(session =>
@@ -108,9 +108,9 @@ internal static class AuthEndpoints
         });
     }
 
-    private static async Task<NoContent> Logout(IAuthService auth, HttpContext http, CancellationToken ct)
+    private static async Task<NoContent> Logout(IAuthService auth, HttpContext http, CancellationToken cancellationToken)
     {
-        await auth.LogoutAsync(RefreshTokenCookie.Read(http), ct);
+        await auth.LogoutAsync(RefreshTokenCookie.Read(http), cancellationToken);
         RefreshTokenCookie.Clear(http);
         return TypedResults.NoContent();
     }
@@ -118,18 +118,18 @@ internal static class AuthEndpoints
     private static Ok<CurrentUserDto> Me(ClaimsPrincipal user) => TypedResults.Ok(user.ToCurrentUser());
 
     private static async Task<Results<NoContent, ProblemHttpResult>> ChangePassword(
-        ChangePasswordRequest request, ClaimsPrincipal user, IAuthService auth, HttpContext http, CancellationToken ct) =>
-        (await auth.ChangePasswordAsync(user.GetUserId(), request.ToCommand(), RefreshTokenCookie.Read(http), ct)).ToHttpResult();
+        ChangePasswordRequest request, ClaimsPrincipal user, IAuthService auth, HttpContext http, CancellationToken cancellationToken) =>
+        (await auth.ChangePasswordAsync(user.GetUserId(), request.ToCommand(), RefreshTokenCookie.Read(http), cancellationToken)).ToHttpResult();
 
-    private static async Task<Ok<IReadOnlyList<ApiKeyDto>>> ListApiKeys(ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken ct) =>
-        TypedResults.Ok(await apiKeys.ListAsync(user.GetUserId(), ct));
+    private static async Task<Ok<IReadOnlyList<ApiKeyDto>>> ListApiKeys(ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await apiKeys.ListAsync(user.GetUserId(), cancellationToken));
 
     private static async Task<Results<Created<CreatedApiKeyDto>, ProblemHttpResult>> CreateApiKey(
-        CreateApiKeyRequest request, ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken ct) =>
-        (await apiKeys.CreateAsync(user.ToActor(), request.ToCommand(), ct))
+        CreateApiKeyRequest request, ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken cancellationToken) =>
+        (await apiKeys.CreateAsync(user.ToActor(), request.ToCommand(), cancellationToken))
             .ToHttpResult(created => TypedResults.Created($"/api/auth/api-keys/{created.ApiKey.Id}", created));
 
     private static async Task<Results<NoContent, ProblemHttpResult>> RevokeApiKey(
-        Guid id, ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken ct) =>
-        (await apiKeys.RevokeAsync(user.GetUserId(), id, ct)).ToHttpResult();
+        Guid id, ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken cancellationToken) =>
+        (await apiKeys.RevokeAsync(user.GetUserId(), id, cancellationToken)).ToHttpResult();
 }

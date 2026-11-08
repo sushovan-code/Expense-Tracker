@@ -9,10 +9,10 @@ namespace ExpenseTracker.Application.Abstractions.Identity;
 public interface IUserAccessProvider
 {
     /// <summary><c>null</c> when the user no longer exists.</summary>
-    Task<UserAccess?> GetAsync(Guid userId, CancellationToken ct);
+    Task<UserAccess?> GetAsync(Guid userId, CancellationToken cancellationToken);
 
-    Task InvalidateAsync(Guid userId, CancellationToken ct);
+    Task InvalidateAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>Used when a role's permissions change, which affects every member of the role.</summary>
-    Task InvalidateAllAsync(CancellationToken ct);
+    Task InvalidateAllAsync(CancellationToken cancellationToken);
 }

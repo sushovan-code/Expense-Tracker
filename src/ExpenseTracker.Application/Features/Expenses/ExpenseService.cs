@@ -13,14 +13,14 @@ namespace ExpenseTracker.Application.Features.Expenses;
 
 public interface IExpenseService
 {
-    Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken ct);
-    Task<Result<IReadOnlyList<ExpenseDto>>> ExportAsync(ExpenseFilter filter, string? sortBy, string? sortDir, CancellationToken ct);
-    Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken ct);
-    Task<Result<ExpenseDto>> GetAsync(int id, CancellationToken ct);
-    Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken ct);
-    Task<Result<ExpenseDto>> UpdateAsync(int id, ExpenseCommand command, CancellationToken ct);
-    Task<Result> DeleteAsync(int id, CancellationToken ct);
-    Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<int> ids, CancellationToken ct);
+    Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken cancellationToken);
+    Task<Result<IReadOnlyList<ExpenseDto>>> ExportAsync(ExpenseFilter filter, string? sortBy, string? sortDir, CancellationToken cancellationToken);
+    Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken);
+    Task<Result<ExpenseDto>> GetAsync(int id, CancellationToken cancellationToken);
+    Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken cancellationToken);
+    Task<Result<ExpenseDto>> UpdateAsync(int id, ExpenseCommand command, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(int id, CancellationToken cancellationToken);
+    Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
 }
 
 internal sealed partial class ExpenseService(
@@ -33,14 +33,14 @@ internal sealed partial class ExpenseService(
     TimeProvider clock,
     ILogger<ExpenseService> logger) : IExpenseService
 {
-    public async Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken ct)
+    public async Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken cancellationToken)
     {
         if (!IsValidRange(request.Filter)) return ExpenseErrors.InvalidDateRange;
         var sort = Paging.ResolveSort(request.SortBy, request.SortDir, ExpenseSorting.Default, defaultDescending: true, ExpenseSorting.Fields);
         if (!sort.IsSuccess) return sort.Error;
 
         var started = Stopwatch.GetTimestamp();
-        var page = await queries.ListAsync(request.Filter, request.Page, sort.Value, ct);
+        var page = await queries.ListAsync(request.Filter, request.Page, sort.Value, cancellationToken);
 
         LogExpensesListed(logger, page.Items.Count, page.TotalCount, page.Page, page.PageSize, sort.Value.Field,
             sort.Value.Direction, request.Filter.IsFiltered, Stopwatch.GetElapsedTime(started).TotalMilliseconds);
@@ -48,40 +48,40 @@ internal sealed partial class ExpenseService(
     }
 
     public async Task<Result<IReadOnlyList<ExpenseDto>>> ExportAsync(
-        ExpenseFilter filter, string? sortBy, string? sortDir, CancellationToken ct)
+        ExpenseFilter filter, string? sortBy, string? sortDir, CancellationToken cancellationToken)
     {
         if (!IsValidRange(filter)) return ExpenseErrors.InvalidDateRange;
         var sort = Paging.ResolveSort(sortBy, sortDir, ExpenseSorting.Default, defaultDescending: true, ExpenseSorting.Fields);
         if (!sort.IsSuccess) return sort.Error;
 
-        var rows = await queries.ListAllAsync(filter, sort.Value, ExpenseExport.MaxRows + 1, ct);
+        var rows = await queries.ListAllAsync(filter, sort.Value, ExpenseExport.MaxRows + 1, cancellationToken);
         if (rows.Count > ExpenseExport.MaxRows) return ExpenseErrors.ExportTooLarge(ExpenseExport.MaxRows);
 
         LogExpensesExported(logger, rows.Count, filter.IsFiltered);
         return Result<IReadOnlyList<ExpenseDto>>.Success(rows);
     }
 
-    public async Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken ct)
+    public async Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
     {
         if (from > to) return ExpenseErrors.InvalidDateRange;
 
-        var summary = await queries.SummarizeAsync(from, to, ct);
+        var summary = await queries.SummarizeAsync(from, to, cancellationToken);
         LogSummaryComputed(logger, from, to, summary.Count, summary.Total);
         return summary;
     }
 
-    public async Task<Result<ExpenseDto>> GetAsync(int id, CancellationToken ct)
+    public async Task<Result<ExpenseDto>> GetAsync(int id, CancellationToken cancellationToken)
     {
-        var expense = await queries.GetAsync(id, ct);
+        var expense = await queries.GetAsync(id, cancellationToken);
         if (expense is not null) return expense;
 
         LogExpenseNotFound(logger, id);
         return ExpenseErrors.NotFound(id);
     }
 
-    public async Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken ct)
+    public async Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken cancellationToken)
     {
-        var category = await categories.GetByIdAsync(command.CategoryId, ct);
+        var category = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
         if (category is null) return ExpenseErrors.UnknownCategory;
 
         var created = Expense.Create(ToDetails(command), clock.GetUtcNow().UtcDateTime);
@@ -89,74 +89,74 @@ internal sealed partial class ExpenseService(
         var expense = created.Value;
 
         expenses.Add(expense);
-        await unitOfWork.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         LogExpenseCreated(logger, expense.Id, expense.Amount, category.Id, category.Name, expense.Date);
-        await notifier.ExpensesChangedAsync(ChangeAction.Created, [expense.Id], ct);
-        await CheckBudgetAsync(expense.CategoryId, expense.Date, expense.Amount, ct);
+        await notifier.ExpensesChangedAsync(ChangeAction.Created, [expense.Id], cancellationToken);
+        await CheckBudgetAsync(expense.CategoryId, expense.Date, expense.Amount, cancellationToken);
 
         return ToDto(expense, category);
     }
 
-    public async Task<Result<ExpenseDto>> UpdateAsync(int id, ExpenseCommand command, CancellationToken ct)
+    public async Task<Result<ExpenseDto>> UpdateAsync(int id, ExpenseCommand command, CancellationToken cancellationToken)
     {
-        var expense = await expenses.GetByIdAsync(id, ct);
+        var expense = await expenses.GetByIdAsync(id, cancellationToken);
         if (expense is null)
         {
             LogExpenseNotFound(logger, id);
             return ExpenseErrors.NotFound(id);
         }
 
-        var category = await categories.GetByIdAsync(command.CategoryId, ct);
+        var category = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
         if (category is null) return ExpenseErrors.UnknownCategory;
 
         var before = (expense.Amount, expense.CategoryId, expense.Date);
         var updated = expense.Update(ToDetails(command));
         if (!updated.IsSuccess) return updated.Error;
-        await unitOfWork.SaveChangesAsync(ct);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         LogExpenseUpdated(logger, expense.Id, before.Amount, expense.Amount, before.CategoryId, expense.CategoryId,
             before.Date, expense.Date);
-        await notifier.ExpensesChangedAsync(ChangeAction.Updated, [expense.Id], ct);
+        await notifier.ExpensesChangedAsync(ChangeAction.Updated, [expense.Id], cancellationToken);
 
         // Only the amount newly added to this category's month can push it over budget.
         var sameMonthAndCategory = before.CategoryId == expense.CategoryId
             && before.Date.Year == expense.Date.Year && before.Date.Month == expense.Date.Month;
         await CheckBudgetAsync(expense.CategoryId, expense.Date,
-            sameMonthAndCategory ? expense.Amount - before.Amount : expense.Amount, ct);
+            sameMonthAndCategory ? expense.Amount - before.Amount : expense.Amount, cancellationToken);
 
         return ToDto(expense, category);
     }
 
-    public async Task<Result> DeleteAsync(int id, CancellationToken ct)
+    public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken)
     {
-        if (!await expenses.DeleteAsync(id, ct))
+        if (!await expenses.DeleteAsync(id, cancellationToken))
         {
             LogExpenseNotFound(logger, id);
             return ExpenseErrors.NotFound(id);
         }
 
         LogExpenseDeleted(logger, id);
-        await notifier.ExpensesChangedAsync(ChangeAction.Deleted, [id], ct);
+        await notifier.ExpensesChangedAsync(ChangeAction.Deleted, [id], cancellationToken);
         return Result.Success();
     }
 
-    public async Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
+    public async Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
     {
         var requested = ids.Distinct().ToArray();
-        var deleted = await expenses.DeleteManyAsync(requested, ct);
+        var deleted = await expenses.DeleteManyAsync(requested, cancellationToken);
 
         LogExpensesBulkDeleted(logger, deleted.Count, requested.Length, requested.Length - deleted.Count);
-        if (deleted.Count > 0) await notifier.ExpensesChangedAsync(ChangeAction.Deleted, deleted, ct);
+        if (deleted.Count > 0) await notifier.ExpensesChangedAsync(ChangeAction.Deleted, deleted, cancellationToken);
 
         return new BulkDeleteResult(deleted.Count, deleted);
     }
 
-    private async Task CheckBudgetAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken ct)
+    private async Task CheckBudgetAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken)
     {
-        if (await budgets.DetectOverrunAsync(categoryId, date, addedAmount, ct) is { } alert)
+        if (await budgets.DetectOverrunAsync(categoryId, date, addedAmount, cancellationToken) is { } alert)
         {
-            await notifier.BudgetExceededAsync(alert, ct);
+            await notifier.BudgetExceededAsync(alert, cancellationToken);
         }
     }
 

@@ -54,22 +54,22 @@ internal static class CategoryEndpoints
     }
 
     private static async Task<Results<Ok<PagedResult<CategoryDto>>, ProblemHttpResult>> List(
-        [AsParameters] CategoryListQuery query, ICategoryService service, CancellationToken ct) =>
-        (await service.ListAsync(query.ToRequest(), ct)).ToHttpResult(TypedResults.Ok);
+        [AsParameters] CategoryListQuery query, ICategoryService service, CancellationToken cancellationToken) =>
+        (await service.ListAsync(query.ToRequest(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
-    private static async Task<Ok<IReadOnlyList<CategoryLookupDto>>> Lookup(ICategoryService service, CancellationToken ct) =>
-        TypedResults.Ok(await service.LookupAsync(ct));
+    private static async Task<Ok<IReadOnlyList<CategoryLookupDto>>> Lookup(ICategoryService service, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await service.LookupAsync(cancellationToken));
 
     private static async Task<Results<Created<CategoryDto>, ProblemHttpResult>> Create(
-        CategoryRequest request, ICategoryService service, CancellationToken ct) =>
-        (await service.CreateAsync(request.ToCommand(), ct))
+        CategoryRequest request, ICategoryService service, CancellationToken cancellationToken) =>
+        (await service.CreateAsync(request.ToCommand(), cancellationToken))
             .ToHttpResult(c => TypedResults.Created($"/api/categories/{c.Id}", c));
 
     private static async Task<Results<Ok<CategoryDto>, ProblemHttpResult>> Update(
-        int id, CategoryRequest request, ICategoryService service, CancellationToken ct) =>
-        (await service.UpdateAsync(id, request.ToCommand(), ct)).ToHttpResult(TypedResults.Ok);
+        int id, CategoryRequest request, ICategoryService service, CancellationToken cancellationToken) =>
+        (await service.UpdateAsync(id, request.ToCommand(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
-        int id, ICategoryService service, CancellationToken ct) =>
-        (await service.DeleteAsync(id, ct)).ToHttpResult();
+        int id, ICategoryService service, CancellationToken cancellationToken) =>
+        (await service.DeleteAsync(id, cancellationToken)).ToHttpResult();
 }

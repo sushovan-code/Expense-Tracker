@@ -4,22 +4,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.Persistence.Repositories;
 
-internal sealed class ExpenseRepository(AppDbContext db) : IExpenseRepository
+internal sealed class ExpenseRepository(AppDbContext dbContext) : IExpenseRepository
 {
-    public Task<Expense?> GetByIdAsync(int id, CancellationToken ct) =>
-        db.Expenses.FirstOrDefaultAsync(e => e.Id == id, ct);
+    public Task<Expense?> GetByIdAsync(int id, CancellationToken cancellationToken) =>
+        dbContext.Expenses.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
-    public void Add(Expense expense) => db.Expenses.Add(expense);
+    public void Add(Expense expense) => dbContext.Expenses.Add(expense);
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct) =>
-        await db.Expenses.Where(e => e.Id == id).ExecuteDeleteAsync(ct) > 0;
+    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken) =>
+        await dbContext.Expenses.Where(e => e.Id == id).ExecuteDeleteAsync(cancellationToken) > 0;
 
-    public async Task<IReadOnlyList<int>> DeleteManyAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
+    public async Task<IReadOnlyList<int>> DeleteManyAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken)
     {
-        var existing = await db.Expenses.Where(e => ids.Contains(e.Id)).Select(e => e.Id).ToListAsync(ct);
+        var existing = await dbContext.Expenses.Where(e => ids.Contains(e.Id)).Select(e => e.Id).ToListAsync(cancellationToken);
         if (existing.Count > 0)
         {
-            await db.Expenses.Where(e => existing.Contains(e.Id)).ExecuteDeleteAsync(ct);
+            await dbContext.Expenses.Where(e => existing.Contains(e.Id)).ExecuteDeleteAsync(cancellationToken);
         }
         return existing;
     }

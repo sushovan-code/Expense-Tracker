@@ -22,6 +22,6 @@ internal static class BudgetEndpoints
     }
 
     private static async Task<Ok<BudgetOverviewDto>> Overview(
-        [AsParameters] BudgetQuery query, IBudgetService service, CancellationToken ct) =>
-        TypedResults.Ok(await service.GetOverviewAsync(query.Year, query.Month, ct));
+        [AsParameters] BudgetQuery query, IBudgetService service, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await service.GetOverviewAsync(query.Year, query.Month, cancellationToken));
 }

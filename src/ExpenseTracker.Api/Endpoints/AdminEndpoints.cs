@@ -131,59 +131,59 @@ internal static class AdminEndpoints
     // ---- Users ----
 
     private static async Task<Results<Ok<PagedResult<UserSummaryDto>>, ProblemHttpResult>> ListUsers(
-        [AsParameters] UserListQuery query, IUserAdminService service, CancellationToken ct) =>
-        (await service.ListAsync(query.ToRequest(), ct)).ToHttpResult(TypedResults.Ok);
+        [AsParameters] UserListQuery query, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.ListAsync(query.ToRequest(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<Ok<UserDetailDto>, ProblemHttpResult>> GetUser(
-        Guid id, IUserAdminService service, CancellationToken ct) =>
-        (await service.GetAsync(id, ct)).ToHttpResult(TypedResults.Ok);
+        Guid id, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.GetAsync(id, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<CreatedAtRoute<UserDetailDto>, ProblemHttpResult>> CreateUser(
-        CreateUserRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.CreateAsync(user.ToActor(), request.ToCommand(), ct))
+        CreateUserRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.CreateAsync(user.ToActor(), request.ToCommand(), cancellationToken))
             .ToHttpResult(created => TypedResults.CreatedAtRoute(created, "GetUser", new { id = created.Id }));
 
     private static async Task<Results<Ok<UserDetailDto>, ProblemHttpResult>> UpdateUser(
-        Guid id, UpdateUserRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.UpdateAsync(user.ToActor(), id, request.ToCommand(), ct)).ToHttpResult(TypedResults.Ok);
+        Guid id, UpdateUserRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.UpdateAsync(user.ToActor(), id, request.ToCommand(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteUser(
-        Guid id, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.DeleteAsync(user.ToActor(), id, ct)).ToHttpResult();
+        Guid id, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.DeleteAsync(user.ToActor(), id, cancellationToken)).ToHttpResult();
 
     private static async Task<Results<Ok<UserDetailDto>, ProblemHttpResult>> SetRoles(
-        Guid id, SetUserRolesRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.SetRolesAsync(user.ToActor(), id, request.Roles, ct)).ToHttpResult(TypedResults.Ok);
+        Guid id, SetUserRolesRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.SetRolesAsync(user.ToActor(), id, request.Roles, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<Ok<UserDetailDto>, ProblemHttpResult>> AddClaim(
-        Guid id, UserClaimRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.AddClaimAsync(user.ToActor(), id, request.ToClaim(), ct)).ToHttpResult(TypedResults.Ok);
+        Guid id, UserClaimRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.AddClaimAsync(user.ToActor(), id, request.ToClaim(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<Ok<UserDetailDto>, ProblemHttpResult>> RemoveClaim(
-        Guid id, [AsParameters] UserClaimRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.RemoveClaimAsync(user.ToActor(), id, request.ToClaim(), ct)).ToHttpResult(TypedResults.Ok);
+        Guid id, [AsParameters] UserClaimRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.RemoveClaimAsync(user.ToActor(), id, request.ToClaim(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> ResetPassword(
-        Guid id, ResetPasswordRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.ResetPasswordAsync(user.ToActor(), id, request.NewPassword, ct)).ToHttpResult();
+        Guid id, ResetPasswordRequest request, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.ResetPasswordAsync(user.ToActor(), id, request.NewPassword, cancellationToken)).ToHttpResult();
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Unlock(
-        Guid id, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.UnlockAsync(user.ToActor(), id, ct)).ToHttpResult();
+        Guid id, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.UnlockAsync(user.ToActor(), id, cancellationToken)).ToHttpResult();
 
     private static async Task<Results<NoContent, ProblemHttpResult>> RevokeSessions(
-        Guid id, ClaimsPrincipal user, IUserAdminService service, CancellationToken ct) =>
-        (await service.RevokeSessionsAsync(user.ToActor(), id, ct)).ToHttpResult();
+        Guid id, ClaimsPrincipal user, IUserAdminService service, CancellationToken cancellationToken) =>
+        (await service.RevokeSessionsAsync(user.ToActor(), id, cancellationToken)).ToHttpResult();
 
     // ---- Roles ----
 
     private static async Task<Ok<IReadOnlyList<RoleDto>>> ListRoles(
-        ClaimsPrincipal user, IRoleAdminService service, CancellationToken ct) =>
-        TypedResults.Ok(await service.ListAsync(user.ToActor(), ct));
+        ClaimsPrincipal user, IRoleAdminService service, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await service.ListAsync(user.ToActor(), cancellationToken));
 
     private static async Task<Results<Ok<RoleDto>, ProblemHttpResult>> SetRolePermissions(
-        string name, SetRolePermissionsRequest request, ClaimsPrincipal user, IRoleAdminService service, CancellationToken ct) =>
-        (await service.SetPermissionsAsync(user.ToActor(), name, request.Permissions, ct)).ToHttpResult(TypedResults.Ok);
+        string name, SetRolePermissionsRequest request, ClaimsPrincipal user, IRoleAdminService service, CancellationToken cancellationToken) =>
+        (await service.SetPermissionsAsync(user.ToActor(), name, request.Permissions, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static Ok<IReadOnlyList<PermissionInfo>> ListPermissions() => TypedResults.Ok(Permissions.All);
 }

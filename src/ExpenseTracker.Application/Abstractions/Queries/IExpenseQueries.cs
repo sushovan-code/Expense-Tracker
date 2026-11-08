@@ -9,8 +9,8 @@ namespace ExpenseTracker.Application.Abstractions.Queries;
 /// </summary>
 public interface IExpenseQueries
 {
-    Task<ExpensePage> ListAsync(ExpenseFilter filter, PageRequest page, SortSpec sort, CancellationToken ct);
-    Task<IReadOnlyList<ExpenseDto>> ListAllAsync(ExpenseFilter filter, SortSpec sort, int maxRows, CancellationToken ct);
-    Task<ExpenseDto?> GetAsync(int id, CancellationToken ct);
-    Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken ct);
+    Task<ExpensePage> ListAsync(ExpenseFilter filter, PageRequest page, SortSpec sort, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ExpenseDto>> ListAllAsync(ExpenseFilter filter, SortSpec sort, int maxRows, CancellationToken cancellationToken);
+    Task<ExpenseDto?> GetAsync(int id, CancellationToken cancellationToken);
+    Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken);
 }

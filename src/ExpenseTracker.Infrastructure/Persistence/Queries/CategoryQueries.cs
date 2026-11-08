@@ -7,33 +7,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.Persistence.Queries;
 
-internal sealed class CategoryQueries(AppDbContext db) : ICategoryQueries
+internal sealed class CategoryQueries(AppDbContext dbContext) : ICategoryQueries
 {
-    public async Task<PagedResult<CategoryDto>> ListAsync(string? search, PageRequest request, SortSpec sort, CancellationToken ct)
+    public async Task<PagedResult<CategoryDto>> ListAsync(string? search, PageRequest request, SortSpec sort, CancellationToken cancellationToken)
     {
-        var categories = db.Categories.AsNoTracking();
+        var categories = dbContext.Categories.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))
         {
             categories = categories.Where(c => c.Name.Contains(search));
         }
 
-        var totalCount = await categories.CountAsync(ct);
+        var totalCount = await categories.CountAsync(cancellationToken);
         var (page, pageSize) = Paging.Resolve(request, totalCount);
 
         var items = await Sort(categories, sort)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(c => new CategoryDto(c.Id, c.Name, c.Color, c.MonthlyBudget, c.Expenses.Count))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
         return new PagedResult<CategoryDto>(items, page, pageSize, totalCount);
     }
 
-    public async Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken ct) =>
-        await db.Categories.AsNoTracking()
+    public async Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken cancellationToken) =>
+        await dbContext.Categories.AsNoTracking()
             .OrderBy(c => c.Name)
             .Select(c => new CategoryLookupDto(c.Id, c.Name, c.Color))
-            .ToListAsync(ct);
+            .ToListAsync(cancellationToken);
 
     private static IQueryable<Category> Sort(IQueryable<Category> query, SortSpec sort) => sort.Field switch
     {
