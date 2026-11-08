@@ -28,34 +28,11 @@ internal sealed partial class UserAdminService(
         var sort = Paging.ResolveSort(request.SortBy, request.SortDir, UserSorting.Default, defaultDescending: false, UserSorting.Fields);
         if (!sort.IsSuccess) return sort.Error;
 
-        IQueryable<AppUser> query = db.Users.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var search = request.Search.Trim();
-            query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
-        }
-        if (!string.IsNullOrWhiteSpace(request.Role))
-        {
-            var role = request.Role.Trim().ToUpperInvariant();
-            query = query.Where(u => db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.NormalizedName == role)));
-        }
-
+        var query = FilterUsers(request);
         var total = await query.CountAsync(ct);
         var (page, pageSize) = Paging.Resolve(request.Page, total);
 
-        var ordered = (sort.Value.Field, sort.Value.Descending) switch
-        {
-            ("email", false) => query.OrderBy(u => u.Email),
-            ("email", true) => query.OrderByDescending(u => u.Email),
-            ("created", false) => query.OrderBy(u => u.CreatedAt),
-            ("created", true) => query.OrderByDescending(u => u.CreatedAt),
-            ("lastlogin", false) => query.OrderBy(u => u.LastLoginAt),
-            ("lastlogin", true) => query.OrderByDescending(u => u.LastLoginAt),
-            (_, true) => query.OrderByDescending(u => u.DisplayName),
-            _ => query.OrderBy(u => u.DisplayName),
-        };
-
-        var rows = await ordered.ThenBy(u => u.Id)
+        var rows = await SortUsers(query, sort.Value).ThenBy(u => u.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(u => new { u.Id, u.Email, u.DisplayName, u.IsActive, u.LockoutEnd, u.CreatedAt, u.LastLoginAt })
             .ToListAsync(ct);
@@ -68,6 +45,36 @@ internal sealed partial class UserAdminService(
 
         return new PagedResult<UserSummaryDto>(items, page, pageSize, total);
     }
+
+    private IQueryable<AppUser> FilterUsers(UserListRequest request)
+    {
+        IQueryable<AppUser> query = db.Users.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim();
+            query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Role))
+        {
+            var role = request.Role.Trim().ToUpperInvariant();
+            query = query.Where(u => db.UserRoles.Any(ur => ur.UserId == u.Id && db.Roles.Any(r => r.Id == ur.RoleId && r.NormalizedName == role)));
+        }
+
+        return query;
+    }
+
+    private static IOrderedQueryable<AppUser> SortUsers(IQueryable<AppUser> query, SortSpec sort) => (sort.Field, sort.Descending) switch
+    {
+        ("email", false) => query.OrderBy(u => u.Email),
+        ("email", true) => query.OrderByDescending(u => u.Email),
+        ("created", false) => query.OrderBy(u => u.CreatedAt),
+        ("created", true) => query.OrderByDescending(u => u.CreatedAt),
+        ("lastlogin", false) => query.OrderBy(u => u.LastLoginAt),
+        ("lastlogin", true) => query.OrderByDescending(u => u.LastLoginAt),
+        (_, true) => query.OrderByDescending(u => u.DisplayName),
+        _ => query.OrderBy(u => u.DisplayName),
+    };
 
     public async Task<Result<UserDetailDto>> GetAsync(Guid id, CancellationToken ct)
     {
@@ -93,14 +100,29 @@ internal sealed partial class UserAdminService(
             CreatedAt = clock.GetUtcNow(),
         };
 
-        var created = await users.CreateAsync(user, command.Password);
-        if (!created.Succeeded) return created.ToError();
-
-        var assigned = await users.AddToRolesAsync(user, roles.Select(Canonical));
-        if (!assigned.Succeeded)
+        // The account and its roles are saved together, so a failed role assignment leaves no half-created user.
+        var saved = await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            await users.DeleteAsync(user);
-            return assigned.ToError();
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+            var created = await users.CreateAsync(user, command.Password);
+            if (!created.Succeeded)
+            {
+                return created.ToError();
+            }
+
+            var assigned = await users.AddToRolesAsync(user, roles.Select(Canonical));
+            if (!assigned.Succeeded)
+            {
+                return assigned.ToError();
+            }
+
+            await transaction.CommitAsync(ct);
+            return (Error?)null;
+        });
+        if (saved is not null)
+        {
+            return saved;
         }
 
         LogUserCreated(logger, actor.UserId, user.Id, string.Join(", ", roles.Select(Canonical)));
