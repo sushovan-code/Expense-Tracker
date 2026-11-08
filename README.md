@@ -268,7 +268,7 @@ The API integration tests host the real API in memory against a **throwaway Loca
 
 ```
 ExpenseTracker.slnx               Solution (src/ + tests/ folders)
-Directory.Build.props             Shared .NET settings (net10.0, nullable, warnings as errors, …)
+Directory.Build.props             Shared .NET settings (net10.0, nullable, latest analyzers; warnings reported, not fatal)
 Directory.Packages.props          Central NuGet versions
 global.json                       SDK pin + Microsoft Testing Platform
 .editorconfig                     Code style
