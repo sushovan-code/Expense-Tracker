@@ -4,8 +4,8 @@ using ExpenseTracker.Domain.Common;
 
 namespace ExpenseTracker.Application.Features.Identity;
 
-// Identity use cases. They're thin orchestration over the identity store (ASP.NET Core Identity), so
-// they're implemented next to it in Infrastructure; the rules they enforce live in AccessPolicy.
+// Identity use cases. They orchestrate through the identity ports in Abstractions/Identity (implemented over
+// ASP.NET Core Identity in Infrastructure); the rules they enforce live in AccessPolicy.
 
 /// <summary>Sign-in, session renewal and self-service account operations.</summary>
 public interface IAuthService

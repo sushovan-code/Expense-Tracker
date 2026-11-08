@@ -1,75 +1,53 @@
 using ExpenseTracker.Application.Abstractions.Identity;
 using ExpenseTracker.Application.Common;
-using ExpenseTracker.Application.Features.Identity;
+using ExpenseTracker.Application.Security;
 using ExpenseTracker.Domain.Common;
-using ExpenseTracker.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
-namespace ExpenseTracker.Infrastructure.Identity;
+namespace ExpenseTracker.Application.Features.Identity;
 
 internal sealed partial class AuthService(
-    UserManager<AppUser> users,
-    AppDbContext dbContext,
+    IUserAccountStore accounts,
+    IUserCredentialStore credentials,
+    IRefreshTokenStore refreshTokens,
     IAccessTokenIssuer tokens,
     IUserAccessProvider access,
-    IOptions<IdentityStoreOptions> settings,
+    SessionPolicy sessionPolicy,
     TimeProvider clock,
     ILogger<AuthService> logger) : IAuthService
 {
     // One message for unknown email and wrong password, so sign-in can't be used to discover accounts.
     private static readonly Error InvalidCredentials = Error.Unauthorized("Sign-in failed", "Invalid email or password.");
     private static readonly Error InvalidSession = Error.Unauthorized("Session expired", "Your session has expired. Please sign in again.");
-
-    // Verified against when the email is unknown, so both paths cost one password hash.
-    private static readonly Lazy<string> DummyPasswordHash =
-        new(() => new PasswordHasher<AppUser>().HashPassword(new AppUser(), Guid.NewGuid().ToString()));
+    private static readonly Error AccountDisabled = Error.Unauthorized("Account disabled", "This account has been disabled. Contact an administrator.");
 
     public async Task<Result<AuthSession>> LoginAsync(LoginCommand command, string? ipAddress, CancellationToken cancellationToken)
     {
-        var user = await users.FindByEmailAsync(command.Email.Trim());
+        var user = await accounts.FindByEmailAsync(command.Email.Trim(), cancellationToken);
         if (user is null)
         {
-            users.PasswordHasher.VerifyHashedPassword(new AppUser(), DummyPasswordHash.Value, command.Password);
+            credentials.SimulatePasswordCheck(command.Password);
             LogLoginFailed(logger, null, ipAddress);
             return InvalidCredentials;
         }
 
-        if (await users.IsLockedOutAsync(user))
+        if (await CheckCredentialsAsync(user.Id, command.Password, ipAddress, cancellationToken) is { } refused)
         {
-            LogLoginLockedOut(logger, user.Id, ipAddress);
-            return LockedOut(user);
-        }
-
-        if (!await users.CheckPasswordAsync(user, command.Password))
-        {
-            await users.AccessFailedAsync(user);
-            if (await users.IsLockedOutAsync(user))
-            {
-                LogLoginLockedOut(logger, user.Id, ipAddress);
-                return LockedOut(user);
-            }
-
-            LogLoginFailed(logger, user.Id, ipAddress);
-            return InvalidCredentials;
+            return refused;
         }
 
         // Only revealed after the password checked out.
         if (!user.IsActive)
         {
             LogLoginRejectedInactive(logger, user.Id, ipAddress);
-            return Error.Unauthorized("Account disabled", "This account has been disabled. Contact an administrator.");
+            return AccountDisabled;
         }
 
         var now = clock.GetUtcNow();
-        await users.ResetAccessFailedCountAsync(user);
-        user.LastLoginAt = now;
-        await users.UpdateAsync(user);
+        await credentials.RecordSuccessfulSignInAsync(user.Id, now, cancellationToken);
 
         // Housekeeping: this user's long-dead refresh tokens.
-        await dbContext.RefreshTokens.Where(t => t.UserId == user.Id && t.ExpiresAt < now).ExecuteDeleteAsync(cancellationToken);
+        await refreshTokens.DeleteExpiredAsync(user.Id, now, cancellationToken);
 
         // A password check may have re-hashed the password, which rotates the security stamp.
         await access.InvalidateAsync(user.Id, cancellationToken);
@@ -81,8 +59,7 @@ internal sealed partial class AuthService(
 
     public async Task<Result<AuthSession>> RefreshAsync(string refreshToken, string? ipAddress, CancellationToken cancellationToken)
     {
-        var hash = SecureTokens.Hash(refreshToken);
-        var token = await dbContext.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
+        var token = await refreshTokens.FindByHashAsync(SecureTokens.Hash(refreshToken), cancellationToken);
         if (token is null) return InvalidSession;
 
         var now = clock.GetUtcNow();
@@ -92,7 +69,7 @@ internal sealed partial class AuthService(
             {
                 // A rotated token was presented again: it was copied. Revoke the whole chain so
                 // neither the thief nor the victim can continue; the victim simply signs in again.
-                await dbContext.RefreshTokens.RevokeSessionAsync(token.SessionId, now, cancellationToken);
+                await refreshTokens.RevokeSessionAsync(token.SessionId, now, cancellationToken);
                 LogRefreshTokenReuse(logger, token.UserId, token.SessionId, ipAddress);
             }
             return InvalidSession;
@@ -100,17 +77,13 @@ internal sealed partial class AuthService(
 
         if (token.ExpiresAt <= now) return InvalidSession;
 
-        // Claim the token atomically, so two concurrent refreshes can't both rotate it.
         var nextId = Guid.CreateVersion7();
-        var claimed = await dbContext.RefreshTokens
-            .Where(t => t.Id == token.Id && t.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now).SetProperty(t => t.ReplacedById, nextId), cancellationToken);
-        if (claimed == 0) return InvalidSession;
+        if (!await refreshTokens.TryRotateAsync(token.Id, nextId, now, cancellationToken)) return InvalidSession;
 
         var session = await IssueSessionAsync(token.UserId, token.SessionId, nextId, ipAddress, cancellationToken);
         if (!session.IsSuccess)
         {
-            await dbContext.RefreshTokens.RevokeSessionAsync(token.SessionId, now, cancellationToken);
+            await refreshTokens.RevokeSessionAsync(token.SessionId, now, cancellationToken);
             return session;
         }
 
@@ -122,36 +95,56 @@ internal sealed partial class AuthService(
     {
         if (string.IsNullOrEmpty(refreshToken)) return;
 
-        var hash = SecureTokens.Hash(refreshToken);
-        var token = await dbContext.RefreshTokens.AsNoTracking().SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
+        var token = await refreshTokens.FindByHashAsync(SecureTokens.Hash(refreshToken), cancellationToken);
         if (token is null) return;
 
-        await dbContext.RefreshTokens.RevokeSessionAsync(token.SessionId, clock.GetUtcNow(), cancellationToken);
+        await refreshTokens.RevokeSessionAsync(token.SessionId, clock.GetUtcNow(), cancellationToken);
         LogLoggedOut(logger, token.UserId, token.SessionId);
     }
 
     public async Task<Result> ChangePasswordAsync(
         Guid userId, ChangePasswordCommand command, string? currentRefreshToken, CancellationToken cancellationToken)
     {
-        var user = await users.FindByIdAsync(userId.ToString());
-        if (user is null) return Error.NotFound("User", userId);
+        if (await accounts.FindByIdAsync(userId, cancellationToken) is null) return Error.NotFound("User", userId);
 
         // Validates the new password and rotates the security stamp (invalidating every issued access token).
-        var changed = await users.ChangePasswordAsync(user, command.CurrentPassword, command.NewPassword);
-        if (!changed.Succeeded) return changed.ToError(passwordField: "newPassword");
+        var changed = await credentials.ChangePasswordAsync(userId, command.CurrentPassword, command.NewPassword, cancellationToken);
+        if (!changed.IsSuccess) return changed;
 
         Guid? keepSession = null;
-        if (!string.IsNullOrEmpty(currentRefreshToken))
+        if (!string.IsNullOrEmpty(currentRefreshToken)
+            && await refreshTokens.FindByHashAsync(SecureTokens.Hash(currentRefreshToken), cancellationToken) is { } current
+            && current.UserId == userId)
         {
-            var hash = SecureTokens.Hash(currentRefreshToken);
-            keepSession = await dbContext.RefreshTokens.Where(t => t.TokenHash == hash && t.UserId == userId)
-                .Select(t => (Guid?)t.SessionId).SingleOrDefaultAsync(cancellationToken);
+            keepSession = current.SessionId;
         }
 
-        await dbContext.RefreshTokens.RevokeUserSessionsAsync(userId, clock.GetUtcNow(), cancellationToken, exceptSessionId: keepSession);
+        await refreshTokens.RevokeUserSessionsAsync(userId, clock.GetUtcNow(), keepSession, cancellationToken);
         await access.InvalidateAsync(userId, cancellationToken);
         LogPasswordChanged(logger, userId);
         return Result.Success();
+    }
+
+    /// <summary>Lockout and password checks, in that order; <c>null</c> when the password is right.</summary>
+    private async Task<Error?> CheckCredentialsAsync(Guid userId, string password, string? ipAddress, CancellationToken cancellationToken)
+    {
+        if (await credentials.GetLockoutAsync(userId, cancellationToken) is { IsLockedOut: true } locked)
+        {
+            LogLoginLockedOut(logger, userId, ipAddress);
+            return LockedOut(locked);
+        }
+
+        if (await credentials.CheckPasswordAsync(userId, password, cancellationToken)) return null;
+
+        await credentials.RecordFailedSignInAsync(userId, cancellationToken);
+        if (await credentials.GetLockoutAsync(userId, cancellationToken) is { IsLockedOut: true } nowLocked)
+        {
+            LogLoginLockedOut(logger, userId, ipAddress);
+            return LockedOut(nowLocked);
+        }
+
+        LogLoginFailed(logger, userId, ipAddress);
+        return InvalidCredentials;
     }
 
     private async Task<Result<AuthSession>> IssueSessionAsync(
@@ -162,26 +155,21 @@ internal sealed partial class AuthService(
 
         var now = clock.GetUtcNow();
         var refreshToken = SecureTokens.Generate();
-        var refreshExpiresAt = now + settings.Value.RefreshTokenLifetime;
-        dbContext.RefreshTokens.Add(new RefreshToken
-        {
-            Id = refreshTokenId,
-            UserId = userId,
-            SessionId = sessionId,
-            TokenHash = SecureTokens.Hash(refreshToken),
-            CreatedAt = now,
-            ExpiresAt = refreshExpiresAt,
-            CreatedByIp = ipAddress,
-        });
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var refreshExpiresAt = now + sessionPolicy.RefreshTokenLifetime;
+        await refreshTokens.AddAsync(
+            new RefreshTokenRecord(refreshTokenId, userId, sessionId, SecureTokens.Hash(refreshToken), now, refreshExpiresAt,
+                RevokedAt: null, ReplacedById: null, ipAddress),
+            cancellationToken);
 
         var accessToken = tokens.Issue(new AccessTokenSubject(userId, user.Email, user.DisplayName, user.SecurityStamp));
         return new AuthSession(accessToken.Token, accessToken.ExpiresAt, refreshToken, refreshExpiresAt, user.ToCurrentUser());
     }
 
-    private Error LockedOut(AppUser user)
+    private Error LockedOut(LockoutStatus lockout)
     {
-        var minutes = user.LockoutEnd is { } end ? Math.Max(1, (int)Math.Ceiling((end - clock.GetUtcNow()).TotalMinutes)) : (int)IdentityRules.LockoutDuration.TotalMinutes;
+        var minutes = lockout.End is { } end
+            ? Math.Max(1, (int)Math.Ceiling((end - clock.GetUtcNow()).TotalMinutes))
+            : (int)IdentityRules.LockoutDuration.TotalMinutes;
         return Error.Unauthorized("Account locked",
             $"Too many failed sign-in attempts. Try again in {minutes} minute{(minutes == 1 ? "" : "s")}.");
     }
