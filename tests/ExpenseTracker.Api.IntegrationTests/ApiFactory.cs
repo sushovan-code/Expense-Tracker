@@ -60,7 +60,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         if (_accessTokens.TryGetValue(email, out var cached)) return cached;
 
         using var client = CreateAnonymousClient();
-        var response = await client.PostAsJsonAsync("/api/auth/login", new { email, password });
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
         response.EnsureSuccessStatusCode();
         var token = (await response.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
         return _accessTokens[email] = token;

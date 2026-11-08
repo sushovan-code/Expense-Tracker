@@ -7,7 +7,7 @@ namespace ExpenseTracker.Api.Endpoints;
 internal static class RefreshTokenCookie
 {
     public const string Name = "et_refresh";
-    private const string Path = "/api/auth";
+    private const string Path = ApiRoutes.Auth;
 
     public static string? Read(HttpContext http) => http.Request.Cookies[Name];
 

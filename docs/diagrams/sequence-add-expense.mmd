@@ -9,7 +9,7 @@ sequenceDiagram
   participant O as Other open tabs
 
   U->>W: save the expense form
-  W->>A: POST /api/expenses
+  W->>A: POST /api/v1/expenses
   Note over A: check permission expense.add,<br/>validate contract and domain rules
   A->>D: insert the expense (GUID v7 id)
   A->>D: sum this month's spending in the category

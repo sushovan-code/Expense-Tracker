@@ -1,8 +1,10 @@
 @api = http://localhost:7010
+# The seeded "Food" category (fixed id).
+@foodCategoryId = 0192f0a0-0000-7000-8000-000000000001
 
 ### Sign in (Development seeds superadmin@, admin@, user@ and reader@expensetracker.local)
 # @name login
-POST {{api}}/api/auth/login
+POST {{api}}/api/v1/auth/login
 Content-Type: application/json
 
 {
@@ -13,27 +15,28 @@ Content-Type: application/json
 ###
 @token = {{login.response.body.accessToken}}
 
-GET {{api}}/api/auth/me
+GET {{api}}/api/v1/auth/me
 Authorization: Bearer {{token}}
 
 ###
 
-GET {{api}}/api/categories
+GET {{api}}/api/v1/categories
 Authorization: Bearer {{token}}
 
 ###
 
-GET {{api}}/api/expenses?from=2026-10-01&to=2026-10-31
+GET {{api}}/api/v1/expenses?from=2026-10-01&to=2026-10-31
 Authorization: Bearer {{token}}
 
 ###
 
-GET {{api}}/api/expenses/summary?from=2026-01-01&to=2026-12-31
+GET {{api}}/api/v1/expenses/summary?from=2026-01-01&to=2026-12-31
 Authorization: Bearer {{token}}
 
 ###
 
-POST {{api}}/api/expenses
+# @name create
+POST {{api}}/api/v1/expenses
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -41,13 +44,13 @@ Content-Type: application/json
   "description": "Groceries",
   "amount": 1250.50,
   "date": "2026-10-05",
-  "categoryId": 1,
+  "categoryId": "{{foodCategoryId}}",
   "notes": "Weekly shopping"
 }
 
 ###
 
-PUT {{api}}/api/expenses/1
+PUT {{api}}/api/v1/expenses/{{create.response.body.$.id}}
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -55,17 +58,17 @@ Content-Type: application/json
   "description": "Groceries (updated)",
   "amount": 1300,
   "date": "2026-10-05",
-  "categoryId": 1
+  "categoryId": "{{foodCategoryId}}"
 }
 
 ###
 
-DELETE {{api}}/api/expenses/1
+DELETE {{api}}/api/v1/expenses/{{create.response.body.$.id}}
 Authorization: Bearer {{token}}
 
 ### Create a read-only API key (the key is shown once)
 # @name apiKey
-POST {{api}}/api/auth/api-keys
+POST {{api}}/api/v1/auth/api-keys
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -76,21 +79,21 @@ Content-Type: application/json
 }
 
 ### Call the API with the key
-GET {{api}}/api/expenses
+GET {{api}}/api/v1/expenses
 x-api-key: {{apiKey.response.body.key}}
 
 ### Administration (Admin or above)
-GET {{api}}/api/admin/users
+GET {{api}}/api/v1/admin/users
 Authorization: Bearer {{token}}
 
 ###
 
-GET {{api}}/api/admin/roles
+GET {{api}}/api/v1/admin/roles
 Authorization: Bearer {{token}}
 
 ###
 
-PUT {{api}}/api/admin/roles/Reader/permissions
+PUT {{api}}/api/v1/admin/roles/Reader/permissions
 Authorization: Bearer {{token}}
 Content-Type: application/json
 

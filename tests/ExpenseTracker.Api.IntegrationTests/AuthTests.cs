@@ -23,12 +23,12 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private static object NewExpense => new { description = "auth-test", amount = 10m, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId };
 
     private async Task<HttpResponseMessage> LoginAsync(HttpClient client, string email, string password) =>
-        await client.PostAsJsonAsync("/api/auth/login", new { email, password }, Ct);
+        await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password }, Ct);
 
     private async Task<UserDetail> CreateUserAsync(string role, string? password = null)
     {
         using var superAdmin = await factory.CreateClientForAsync(ApiFactory.SuperAdminEmail, ApiFactory.SuperAdminPassword);
-        var response = await superAdmin.PostAsJsonAsync("/api/admin/users", new
+        var response = await superAdmin.PostAsJsonAsync("/api/v1/admin/users", new
         {
             email = $"{Guid.NewGuid():N}@tests.local",
             displayName = $"Test {role}",
@@ -44,7 +44,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     private static HttpRequestMessage RefreshRequest(string cookie)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/refresh");
         request.Headers.Add("Cookie", cookie);
         return request;
     }
@@ -56,9 +56,9 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var anonymous = factory.CreateAnonymousClient();
 
-        (await anonymous.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        (await anonymous.GetAsync("/api/categories/lookup", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        (await anonymous.GetAsync("/api/auth/me", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await anonymous.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await anonymous.GetAsync("/api/v1/categories/lookup", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await anonymous.GetAsync("/api/v1/auth/me", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         (await anonymous.GetAsync("/openapi/v1.json", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
@@ -93,7 +93,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         cookie.ShouldContain("httponly");
         cookie.ShouldContain("secure");
         cookie.ShouldContain("samesite=strict");
-        cookie.ShouldContain("path=/api/auth");
+        cookie.ShouldContain("path=/api/v1/auth");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var reader = await factory.CreateClientForAsync(ApiFactory.ReaderEmail);
 
-        var me = await reader.GetFromJsonAsync<CurrentUser>("/api/auth/me", Json, Ct);
+        var me = await reader.GetFromJsonAsync<CurrentUser>("/api/v1/auth/me", Json, Ct);
 
         me!.Email.ShouldBe(ApiFactory.ReaderEmail);
         me.Roles.ShouldBe(["Reader"]);
@@ -132,7 +132,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var client = factory.CreateAnonymousClient(handleCookies: false);
         var cookie = RefreshCookieFrom(await LoginAsync(client, ApiFactory.ReaderEmail, ApiFactory.DemoPassword));
 
-        var logout = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout");
+        var logout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         logout.Headers.Add("Cookie", cookie);
         (await client.SendAsync(logout, Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -159,14 +159,14 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var client = factory.CreateAnonymousClient();
         var token = (await (await LoginAsync(client, user.Email, ApiFactory.DemoPassword)).Content.ReadFromJsonAsync<AuthResponse>(Json, Ct))!.AccessToken;
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
-        (await client.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         using var superAdmin = await factory.CreateClientForAsync(ApiFactory.SuperAdminEmail, ApiFactory.SuperAdminPassword);
-        (await superAdmin.PutAsJsonAsync($"/api/admin/users/{user.Id}", new { email = user.Email, displayName = "Disabled", isActive = false }, Ct))
+        (await superAdmin.PutAsJsonAsync($"/api/v1/admin/users/{user.Id}", new { email = user.Email, displayName = "Disabled", isActive = false }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.OK);
 
         // Same, still unexpired access token.
-        (await client.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await client.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         (await LoginAsync(factory.CreateAnonymousClient(), user.Email, ApiFactory.DemoPassword)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
@@ -177,10 +177,10 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var reader = await factory.CreateClientForAsync(ApiFactory.ReaderEmail);
 
-        (await reader.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await reader.GetAsync("/api/budgets", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await reader.PostAsJsonAsync("/api/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await reader.DeleteAsync($"/api/categories/{Guid.NewGuid()}", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await reader.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await reader.GetAsync("/api/v1/budgets", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await reader.PostAsJsonAsync("/api/v1/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await reader.DeleteAsync($"/api/v1/categories/{Guid.NewGuid()}", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -189,9 +189,9 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var user = await factory.CreateClientForAsync(ApiFactory.UserEmail);
         using var admin = await factory.CreateClientForAsync(ApiFactory.AdminEmail);
 
-        (await user.GetAsync("/api/admin/users", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await user.GetAsync("/api/admin/roles", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await admin.GetAsync("/api/admin/users", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await user.GetAsync("/api/v1/admin/users", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await user.GetAsync("/api/v1/admin/roles", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await admin.GetAsync("/api/v1/admin/users", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -201,44 +201,44 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var client = factory.CreateAnonymousClient();
         var token = (await (await LoginAsync(client, created.Email, ApiFactory.DemoPassword)).Content.ReadFromJsonAsync<AuthResponse>(Json, Ct))!.AccessToken;
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
-        (await client.PostAsJsonAsync("/api/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await client.PostAsJsonAsync("/api/v1/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
         using var admin = await factory.CreateClientForAsync(ApiFactory.AdminEmail);
-        var granted = await admin.PostAsJsonAsync($"/api/admin/users/{created.Id}/claims", new { type = "permission", value = "expense.add" }, Ct);
+        var granted = await admin.PostAsJsonAsync($"/api/v1/admin/users/{created.Id}/claims", new { type = "permission", value = "expense.add" }, Ct);
         granted.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await granted.Content.ReadFromJsonAsync<UserDetail>(Json, Ct))!.EffectivePermissions.ShouldContain("expense.add");
 
         // Same token: permissions are resolved per request, not baked into the token.
-        (await client.PostAsJsonAsync("/api/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await client.PostAsJsonAsync("/api/v1/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Created);
 
-        (await admin.DeleteAsync($"/api/admin/users/{created.Id}/claims?type=permission&value=expense.add", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await client.PostAsJsonAsync("/api/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await admin.DeleteAsync($"/api/v1/admin/users/{created.Id}/claims?type=permission&value=expense.add", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.PostAsJsonAsync("/api/v1/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task Admins_cannot_escalate()
     {
         using var admin = await factory.CreateClientForAsync(ApiFactory.AdminEmail);
-        var users = await admin.GetFromJsonAsync<UserPage>("/api/admin/users?pageSize=100", Json, Ct);
+        var users = await admin.GetFromJsonAsync<UserPage>("/api/v1/admin/users?pageSize=100", Json, Ct);
         var superAdmin = users!.Items.Single(u => u.Email == ApiFactory.SuperAdminEmail);
         var self = users.Items.Single(u => u.Email == ApiFactory.AdminEmail);
         var reader = await CreateUserAsync("Reader");
 
         // No creating or promoting anyone to their own rank or above.
-        (await admin.PostAsJsonAsync("/api/admin/users", new { email = "new-admin@tests.local", displayName = "X", password = ApiFactory.DemoPassword, roles = new[] { "Admin" } }, Ct))
+        (await admin.PostAsJsonAsync("/api/v1/admin/users", new { email = "new-admin@tests.local", displayName = "X", password = ApiFactory.DemoPassword, roles = new[] { "Admin" } }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await admin.PutAsJsonAsync($"/api/admin/users/{reader.Id}/roles", new { roles = new[] { "SuperAdmin" } }, Ct))
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{reader.Id}/roles", new { roles = new[] { "SuperAdmin" } }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         // No touching users at or above their rank, or themselves.
-        (await admin.PostAsync($"/api/admin/users/{superAdmin.Id}/revoke-sessions", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await admin.PutAsJsonAsync($"/api/admin/users/{self.Id}/roles", new { roles = new[] { "SuperAdmin" } }, Ct))
+        (await admin.PostAsync($"/api/v1/admin/users/{superAdmin.Id}/revoke-sessions", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{self.Id}/roles", new { roles = new[] { "SuperAdmin" } }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         // No widening their own role.
-        (await admin.PutAsJsonAsync("/api/admin/roles/Admin/permissions", new { permissions = new[] { "expense.view" } }, Ct))
+        (await admin.PutAsJsonAsync("/api/v1/admin/roles/Admin/permissions", new { permissions = new[] { "expense.view" } }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
         // But managing a lower-ranked user works.
-        (await admin.PutAsJsonAsync($"/api/admin/users/{reader.Id}/roles", new { roles = new[] { "User" } }, Ct))
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{reader.Id}/roles", new { roles = new[] { "User" } }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
@@ -247,7 +247,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var admin = await factory.CreateClientForAsync(ApiFactory.AdminEmail);
 
-        var roles = (await admin.GetFromJsonAsync<List<Role>>("/api/admin/roles", Json, Ct))!;
+        var roles = (await admin.GetFromJsonAsync<List<Role>>("/api/v1/admin/roles", Json, Ct))!;
 
         roles.Select(r => r.Name).ShouldBe(["SuperAdmin", "Admin", "User", "Reader"]);
         roles.Where(r => r.CanEdit).Select(r => r.Name).ShouldBe(["User", "Reader"]);
@@ -260,7 +260,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Api_keys_authenticate_within_their_scopes_until_revoked()
     {
         using var user = await factory.CreateClientForAsync(ApiFactory.UserEmail);
-        var created = await user.PostAsJsonAsync("/api/auth/api-keys", new { name = "read-only integration", scopes = new[] { "expense.view" }, expiresInDays = 30 }, Ct);
+        var created = await user.PostAsJsonAsync("/api/v1/auth/api-keys", new { name = "read-only integration", scopes = new[] { "expense.view" }, expiresInDays = 30 }, Ct);
         created.StatusCode.ShouldBe(HttpStatusCode.Created);
         var key = (await created.Content.ReadFromJsonAsync<CreatedApiKey>(Json, Ct))!;
         key.Key.ShouldStartWith(key.ApiKey.Prefix);
@@ -268,14 +268,14 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var integration = factory.CreateAnonymousClient();
         integration.DefaultRequestHeaders.Add("x-api-key", key.Key);
 
-        (await integration.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await integration.PostAsJsonAsync("/api/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await integration.GetFromJsonAsync<CurrentUser>("/api/auth/me", Json, Ct))!.Permissions.ShouldBe(["expense.view"]);
+        (await integration.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await integration.PostAsJsonAsync("/api/v1/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await integration.GetFromJsonAsync<CurrentUser>("/api/v1/auth/me", Json, Ct))!.Permissions.ShouldBe(["expense.view"]);
         // Keys can't mint more keys.
-        (await integration.GetAsync("/api/auth/api-keys", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await integration.GetAsync("/api/v1/auth/api-keys", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
-        (await user.DeleteAsync($"/api/auth/api-keys/{key.ApiKey.Id}", Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
-        (await integration.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await user.DeleteAsync($"/api/v1/auth/api-keys/{key.ApiKey.Id}", Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await integration.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         using var reader = await factory.CreateClientForAsync(ApiFactory.ReaderEmail);
 
-        var response = await reader.PostAsJsonAsync("/api/auth/api-keys", new { name = "sneaky", scopes = new[] { "expense.delete" } }, Ct);
+        var response = await reader.PostAsJsonAsync("/api/v1/auth/api-keys", new { name = "sneaky", scopes = new[] { "expense.delete" } }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
@@ -294,6 +294,6 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var client = factory.CreateAnonymousClient();
         client.DefaultRequestHeaders.Add("x-api-key", "etk_not_a_real_key");
 
-        (await client.GetAsync("/api/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await client.GetAsync("/api/v1/expenses", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 }

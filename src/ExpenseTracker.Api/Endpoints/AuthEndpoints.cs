@@ -127,7 +127,7 @@ internal static class AuthEndpoints
     private static async Task<Results<Created<CreatedApiKeyDto>, ProblemHttpResult>> CreateApiKey(
         CreateApiKeyRequest request, ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken cancellationToken) =>
         (await apiKeys.CreateAsync(user.ToActor(), request.ToCommand(), cancellationToken))
-            .ToHttpResult(created => TypedResults.Created($"/api/auth/api-keys/{created.ApiKey.Id}", created));
+            .ToHttpResult(created => TypedResults.Created($"{ApiRoutes.Auth}/api-keys/{created.ApiKey.Id}", created));
 
     private static async Task<Results<NoContent, ProblemHttpResult>> RevokeApiKey(
         Guid id, ClaimsPrincipal user, IApiKeyService apiKeys, CancellationToken cancellationToken) =>

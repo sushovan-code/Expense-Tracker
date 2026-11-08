@@ -50,7 +50,7 @@ export interface RealtimeSnapshot {
 
 const SERVER_EVENTS = ['ExpensesChanged', 'CategoriesChanged', 'BudgetExceeded', 'PresenceChanged'] as const
 
-/** `/api` → `/hubs/expenses` (same origin, proxied in dev); absolute API URL → same host. */
+/** `/api/v1` → `/hubs/expenses` (same origin, proxied in dev); absolute API URL → same host. */
 function hubUrl(): string {
   const base = /^https?:\/\//.test(API_BASE_URL) ? new URL(API_BASE_URL).origin : ''
   return `${base}/hubs/expenses?clientId=${encodeURIComponent(CLIENT_ID)}`

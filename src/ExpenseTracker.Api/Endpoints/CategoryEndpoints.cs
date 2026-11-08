@@ -63,7 +63,7 @@ internal static class CategoryEndpoints
     private static async Task<Results<Created<CategoryDto>, ProblemHttpResult>> Create(
         CategoryRequest request, ICategoryService service, CancellationToken cancellationToken) =>
         (await service.CreateAsync(request.ToCommand(), cancellationToken))
-            .ToHttpResult(c => TypedResults.Created($"/api/categories/{c.Id}", c));
+            .ToHttpResult(c => TypedResults.Created($"{ApiRoutes.Prefix}/categories/{c.Id}", c));
 
     private static async Task<Results<Ok<CategoryDto>, ProblemHttpResult>> Update(
         Guid id, CategoryRequest request, ICategoryService service, CancellationToken cancellationToken) =>

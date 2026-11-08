@@ -30,11 +30,11 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     private sealed record BudgetStatus(Guid CategoryId, decimal Budget, decimal Spent, [property: JsonPropertyName("state")] string State);
 
     private async Task<Guid> CategoryId(string name) =>
-        (await _client.GetFromJsonAsync<List<Lookup>>("/api/categories/lookup", Ct))!.Single(c => c.Name == name).Id;
+        (await _client.GetFromJsonAsync<List<Lookup>>("/api/v1/categories/lookup", Ct))!.Single(c => c.Name == name).Id;
 
     private async Task<ExpenseDto> CreateExpense(string description, decimal amount, Guid categoryId, string date = "2026-10-05")
     {
-        var response = await _client.PostAsJsonAsync("/api/expenses", new { description, amount, date, categoryId }, Ct);
+        var response = await _client.PostAsJsonAsync("/api/v1/expenses", new { description, amount, date, categoryId }, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<ExpenseDto>(Json, Ct))!;
     }
@@ -42,7 +42,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Seeded_categories_are_available()
     {
-        var categories = await _client.GetFromJsonAsync<List<Lookup>>("/api/categories/lookup", Ct);
+        var categories = await _client.GetFromJsonAsync<List<Lookup>>("/api/v1/categories/lookup", Ct);
         categories.ShouldNotBeNull();
         categories.Select(c => c.Name).ShouldContain("Food");
         categories.Count.ShouldBeGreaterThanOrEqualTo(8);
@@ -55,7 +55,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
         for (var i = 1; i <= 5; i++) await CreateExpense($"paging-test {i}", i * 10m, categoryId);
 
         var page = await _client.GetFromJsonAsync<ExpensePage>(
-            "/api/expenses?search=paging-test&pageSize=2&page=2&sortBy=amount&sortDir=desc", Json, Ct);
+            "/api/v1/expenses?search=paging-test&pageSize=2&page=2&sortBy=amount&sortDir=desc", Json, Ct);
 
         page!.TotalCount.ShouldBe(5);
         page.TotalPages.ShouldBe(3);
@@ -69,7 +69,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
         var categoryId = await CategoryId("Transport");
         await CreateExpense("clamp-test", 5m, categoryId);
 
-        var page = await _client.GetFromJsonAsync<ExpensePage>("/api/expenses?search=clamp-test&page=99", Json, Ct);
+        var page = await _client.GetFromJsonAsync<ExpensePage>("/api/v1/expenses?search=clamp-test&page=99", Json, Ct);
 
         page!.Page.ShouldBe(1);
         page.Items.Count.ShouldBe(1);
@@ -78,7 +78,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Unknown_sort_fields_are_rejected_with_a_validation_problem()
     {
-        var response = await _client.GetAsync("/api/expenses?sortBy=password", Ct);
+        var response = await _client.GetAsync("/api/v1/expenses?sortBy=password", Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<Problem>(Json, Ct);
@@ -88,7 +88,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Request_validation_reports_each_invalid_field()
     {
-        var response = await _client.PostAsJsonAsync("/api/expenses", new { description = "", amount = 0, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId }, Ct);
+        var response = await _client.PostAsJsonAsync("/api/v1/expenses", new { description = "", amount = 0, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<Problem>(Json, Ct);
@@ -98,7 +98,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Domain_rules_are_enforced_through_the_api()
     {
-        var response = await _client.PostAsJsonAsync("/api/expenses",
+        var response = await _client.PostAsJsonAsync("/api/v1/expenses",
             new { description = "too precise", amount = 10.005m, date = "2026-10-05", categoryId = await CategoryId("Food") }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
@@ -110,7 +110,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     {
         var expense = await CreateExpense("Weekly SHOP 50%_off", 20m, await CategoryId("Food"));
 
-        var page = await _client.GetFromJsonAsync<ExpensePage>("/api/expenses?search=shop%2050%25_OFF", Json, Ct);
+        var page = await _client.GetFromJsonAsync<ExpensePage>("/api/v1/expenses?search=shop%2050%25_OFF", Json, Ct);
 
         page!.Items.Select(e => e.Id).ShouldBe([expense.Id]);
     }
@@ -118,7 +118,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Unknown_ids_return_not_found_problems()
     {
-        var response = await _client.GetAsync($"/api/expenses/{Guid.NewGuid()}", Ct);
+        var response = await _client.GetAsync($"/api/v1/expenses/{Guid.NewGuid()}", Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await response.Content.ReadFromJsonAsync<Problem>(Json, Ct))!.Title.ShouldBe("Expense not found");
@@ -130,7 +130,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
         var categoryId = await CategoryId("Health");
         await CreateExpense("conflict-test", 12m, categoryId);
 
-        var response = await _client.DeleteAsync($"/api/categories/{categoryId}", Ct);
+        var response = await _client.DeleteAsync($"/api/v1/categories/{categoryId}", Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
@@ -138,11 +138,11 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Budgets_report_spending_against_the_limit()
     {
-        var created = await _client.PostAsJsonAsync("/api/categories", new { name = "Budget test", color = "#123456", monthlyBudget = 100m }, Ct);
+        var created = await _client.PostAsJsonAsync("/api/v1/categories", new { name = "Budget test", color = "#123456", monthlyBudget = 100m }, Ct);
         var category = (await created.Content.ReadFromJsonAsync<CategoryDto>(Json, Ct))!;
         await CreateExpense("budget-test", 150m, category.Id, "2026-10-10");
 
-        var overview = await _client.GetFromJsonAsync<BudgetOverview>("/api/budgets?year=2026&month=10", Json, Ct);
+        var overview = await _client.GetFromJsonAsync<BudgetOverview>("/api/v1/budgets?year=2026&month=10", Json, Ct);
 
         var status = overview!.Categories.Single(c => c.CategoryId == category.Id);
         status.Spent.ShouldBe(150m);
@@ -154,7 +154,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     {
         await CreateExpense("export-test", 42m, await CategoryId("Other"));
 
-        var response = await _client.GetAsync("/api/expenses/export?search=export-test", Ct);
+        var response = await _client.GetAsync("/api/v1/expenses/export?search=export-test", Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Content.Headers.ContentType!.MediaType.ShouldBe("text/csv");
@@ -170,10 +170,10 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
         var a = await CreateExpense("bulk-test a", 1m, categoryId);
         var b = await CreateExpense("bulk-test b", 2m, categoryId);
 
-        var response = await _client.PostAsJsonAsync("/api/expenses/bulk-delete", new { ids = new[] { a.Id, b.Id, Guid.NewGuid() } }, Ct);
+        var response = await _client.PostAsJsonAsync("/api/v1/expenses/bulk-delete", new { ids = new[] { a.Id, b.Id, Guid.NewGuid() } }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var remaining = await _client.GetFromJsonAsync<ExpensePage>("/api/expenses?search=bulk-test", Json, Ct);
+        var remaining = await _client.GetFromJsonAsync<ExpensePage>("/api/v1/expenses?search=bulk-test", Json, Ct);
         remaining!.TotalCount.ShouldBe(0);
     }
 
@@ -189,7 +189,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task ApiResponses_Always_CarrySecurityHeaders()
     {
-        var response = await _client.GetAsync("/api/categories/lookup", Ct);
+        var response = await _client.GetAsync("/api/v1/categories/lookup", Ct);
 
         response.Headers.GetValues("X-Content-Type-Options").ShouldBe(["nosniff"]);
         response.Headers.GetValues("X-Frame-Options").ShouldBe(["DENY"]);
