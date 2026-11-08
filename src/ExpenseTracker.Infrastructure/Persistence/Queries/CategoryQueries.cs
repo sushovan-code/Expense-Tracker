@@ -14,7 +14,8 @@ internal sealed class CategoryQueries(AppDbContext dbContext) : ICategoryQueries
         var categories = dbContext.Categories.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))
         {
-            categories = categories.Where(c => c.Name.Contains(search));
+            var pattern = LikePatterns.Contains(search.Trim());
+            categories = categories.Where(c => EF.Functions.Like(c.Name, pattern, LikePatterns.EscapeCharacter));
         }
 
         var totalCount = await categories.CountAsync(cancellationToken);

@@ -35,14 +35,14 @@ internal static class CategoryEndpoints
             .WithSummary("Create a category")
             .ProducesValidationProblem();
 
-        group.MapPut("/{id:int}", Update)
+        group.MapPut("/{id:guid}", Update)
             .RequirePermission(Permissions.Categories.Edit)
             .WithName("UpdateCategory")
             .WithSummary("Update a category")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapDelete("/{id:int}", Delete)
+        group.MapDelete("/{id:guid}", Delete)
             .RequirePermission(Permissions.Categories.Delete)
             .WithName("DeleteCategory")
             .WithSummary("Delete a category")
@@ -66,10 +66,10 @@ internal static class CategoryEndpoints
             .ToHttpResult(c => TypedResults.Created($"/api/categories/{c.Id}", c));
 
     private static async Task<Results<Ok<CategoryDto>, ProblemHttpResult>> Update(
-        int id, CategoryRequest request, ICategoryService service, CancellationToken cancellationToken) =>
+        Guid id, CategoryRequest request, ICategoryService service, CancellationToken cancellationToken) =>
         (await service.UpdateAsync(id, request.ToCommand(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
-        int id, ICategoryService service, CancellationToken cancellationToken) =>
+        Guid id, ICategoryService service, CancellationToken cancellationToken) =>
         (await service.DeleteAsync(id, cancellationToken)).ToHttpResult();
 }

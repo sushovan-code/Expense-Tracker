@@ -1,11 +1,11 @@
 import type { IsoDate, PagedResponse, SortDirection } from '@/shared/types'
 
 export interface Expense {
-  id: number
+  id: string
   description: string
   amount: number
   date: IsoDate
-  categoryId: number
+  categoryId: string
   categoryName: string
   categoryColor: string
   notes: string | null
@@ -16,7 +16,7 @@ export interface ExpenseInput {
   description: string
   amount: number
   date: IsoDate
-  categoryId: number
+  categoryId: string
   notes: string | null
 }
 
@@ -25,7 +25,7 @@ export type ExpenseSortField = 'date' | 'amount' | 'description' | 'category' | 
 export interface ExpenseFilters {
   from?: IsoDate
   to?: IsoDate
-  categoryId?: number
+  categoryId?: string
   search?: string
 }
 
@@ -43,11 +43,11 @@ export interface ExpensePage extends PagedResponse<Expense> {
 
 export interface BulkDeleteResult {
   deleted: number
-  deletedIds: number[]
+  deletedIds: string[]
 }
 
 export interface CategoryTotal {
-  categoryId: number
+  categoryId: string
   categoryName: string
   categoryColor: string
   total: number
@@ -70,7 +70,7 @@ export interface ExpenseSummary {
 
 /** Minimal category shape the expense screens need (dropdowns, filters). */
 export interface CategoryOption {
-  id: number
+  id: string
   name: string
   color: string
 }

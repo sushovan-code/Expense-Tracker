@@ -21,7 +21,7 @@ builder.AddServiceDefaults();
 
 builder.Services
     .AddApplication()
-    .AddInfrastructure(builder.Configuration, builder.Environment.EnvironmentName)
+    .AddInfrastructure(builder.Configuration, builder.Environment.EnvironmentName, builder.Environment.ContentRootPath)
     .AddPresentation(builder.Configuration);
 
 var app = builder.Build();

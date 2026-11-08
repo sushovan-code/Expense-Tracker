@@ -24,16 +24,17 @@ public class ExpenseServiceTests
 
     private static readonly Category Food = Category.Create("Food", "#f97316", null).Value!;
     private static readonly CancellationToken Ct = CancellationToken.None;
+    private static readonly Guid FoodId = TestIds.Of(1);
 
     public ExpenseServiceTests()
     {
-        _categories.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(Food);
+        _categories.GetByIdAsync(FoodId, Arg.Any<CancellationToken>()).Returns(Food);
         _service = new ExpenseService(_expenses, _categories, _unitOfWork, _queries, _budgets, _notifier,
             new FixedTimeProvider(), NullLogger<ExpenseService>.Instance);
     }
 
-    private static ExpenseCommand Command(decimal amount = 100m, int categoryId = 1) =>
-        new("Groceries", amount, new DateOnly(2026, 10, 5), categoryId, null);
+    private static ExpenseCommand Command(decimal amount = 100m, Guid? categoryId = null) =>
+        new("Groceries", amount, new DateOnly(2026, 10, 5), categoryId ?? FoodId, null);
 
     [Fact]
     public async Task Create_saves_the_expense_and_notifies_clients()
@@ -44,13 +45,13 @@ public class ExpenseServiceTests
         result.Value.CategoryName.ShouldBe("Food");
         _expenses.Received(1).Add(Arg.Is<Expense>(e => e.Amount == 100m));
         await _unitOfWork.Received(1).SaveChangesAsync(Ct);
-        await _notifier.Received(1).ExpensesChangedAsync(ChangeAction.Created, Arg.Any<IReadOnlyCollection<int>>(), Ct);
+        await _notifier.Received(1).ExpensesChangedAsync(ChangeAction.Created, Arg.Any<IReadOnlyCollection<Guid>>(), Ct);
     }
 
     [Fact]
     public async Task Create_with_unknown_category_is_a_validation_error_and_saves_nothing()
     {
-        var result = await _service.CreateAsync(Command(categoryId: 42), Ct);
+        var result = await _service.CreateAsync(Command(categoryId: TestIds.Of(42)), Ct);
 
         result.Error.ShouldBe(ExpenseErrors.UnknownCategory);
         _expenses.DidNotReceiveWithAnyArgs().Add(default!);
@@ -69,8 +70,8 @@ public class ExpenseServiceTests
     [Fact]
     public async Task Create_broadcasts_a_budget_alert_when_the_monitor_reports_an_overrun()
     {
-        var alert = new BudgetAlert(1, "Food", 50m, 100m, 2026, 10);
-        _budgets.DetectOverrunAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), 100m, Ct).Returns(alert);
+        var alert = new BudgetAlert(FoodId, "Food", 50m, 100m, 2026, 10);
+        _budgets.DetectOverrunAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), 100m, Ct).Returns(alert);
 
         await _service.CreateAsync(Command(), Ct);
 
@@ -80,20 +81,20 @@ public class ExpenseServiceTests
     [Fact]
     public async Task Update_checks_the_budget_with_only_the_added_amount()
     {
-        var existing = Expense.Create(new ExpenseDetails("Groceries", 100m, new DateOnly(2026, 10, 1), 1, null), DateTime.UtcNow).Value!;
-        _expenses.GetByIdAsync(7, Ct).Returns(existing);
+        var existing = Expense.Create(new ExpenseDetails("Groceries", 100m, new DateOnly(2026, 10, 1), FoodId, null), DateTimeOffset.UtcNow).Value!;
+        _expenses.GetByIdAsync(TestIds.Of(7), Ct).Returns(existing);
 
-        await _service.UpdateAsync(7, Command(amount: 130m), Ct);
+        await _service.UpdateAsync(TestIds.Of(7), Command(amount: 130m), Ct);
 
-        await _budgets.Received(1).DetectOverrunAsync(1, new DateOnly(2026, 10, 5), 30m, Ct);
+        await _budgets.Received(1).DetectOverrunAsync(FoodId, new DateOnly(2026, 10, 5), 30m, Ct);
     }
 
     [Fact]
     public async Task Delete_of_a_missing_expense_is_not_found_and_notifies_nobody()
     {
-        _expenses.DeleteAsync(99, Ct).Returns(false);
+        _expenses.DeleteAsync(TestIds.Of(99), Ct).Returns(false);
 
-        var result = await _service.DeleteAsync(99, Ct);
+        var result = await _service.DeleteAsync(TestIds.Of(99), Ct);
 
         result.Error!.Kind.ShouldBe(ErrorKind.NotFound);
         await _notifier.DidNotReceiveWithAnyArgs().ExpensesChangedAsync(default, default!, Ct);
@@ -102,12 +103,12 @@ public class ExpenseServiceTests
     [Fact]
     public async Task Bulk_delete_reports_what_was_actually_deleted()
     {
-        _expenses.DeleteManyAsync(Arg.Any<IReadOnlyCollection<int>>(), Ct).Returns([1, 2]);
+        _expenses.DeleteManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Ct).Returns([TestIds.Of(1), TestIds.Of(2)]);
 
-        var result = await _service.BulkDeleteAsync([1, 2, 2, 3], Ct);
+        var result = await _service.BulkDeleteAsync([TestIds.Of(1), TestIds.Of(2), TestIds.Of(2), TestIds.Of(3)], Ct);
 
         result.Value!.Deleted.ShouldBe(2);
-        await _expenses.Received(1).DeleteManyAsync(Arg.Is<IReadOnlyCollection<int>>(ids => ids.Count == 3), Ct);
+        await _expenses.Received(1).DeleteManyAsync(Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 3), Ct);
     }
 
     [Theory]
@@ -143,7 +144,7 @@ public class ExpenseServiceTests
     }
 
     private static ExpenseDto SampleDto() =>
-        new(1, "x", 1m, new DateOnly(2026, 1, 1), 1, "Food", "#f97316", null, DateTime.UtcNow);
+        new(TestIds.Of(1), "x", 1m, new DateOnly(2026, 1, 1), FoodId, "Food", "#f97316", null, DateTimeOffset.UtcNow);
 }
 
 internal sealed class FixedTimeProvider : TimeProvider

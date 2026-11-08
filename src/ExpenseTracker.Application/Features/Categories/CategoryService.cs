@@ -13,8 +13,8 @@ public interface ICategoryService
     Task<Result<PagedResult<CategoryDto>>> ListAsync(CategoryListRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<CategoryLookupDto>> LookupAsync(CancellationToken cancellationToken);
     Task<Result<CategoryDto>> CreateAsync(CategoryCommand command, CancellationToken cancellationToken);
-    Task<Result<CategoryDto>> UpdateAsync(int id, CategoryCommand command, CancellationToken cancellationToken);
-    Task<Result> DeleteAsync(int id, CancellationToken cancellationToken);
+    Task<Result<CategoryDto>> UpdateAsync(Guid id, CategoryCommand command, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken);
 }
 
 internal sealed partial class CategoryService(
@@ -53,7 +53,7 @@ internal sealed partial class CategoryService(
         return ToDto(category, expenseCount: 0);
     }
 
-    public async Task<Result<CategoryDto>> UpdateAsync(int id, CategoryCommand command, CancellationToken cancellationToken)
+    public async Task<Result<CategoryDto>> UpdateAsync(Guid id, CategoryCommand command, CancellationToken cancellationToken)
     {
         var category = await categories.GetByIdAsync(id, cancellationToken);
         if (category is null)
@@ -76,7 +76,7 @@ internal sealed partial class CategoryService(
         return ToDto(category, await categories.CountExpensesAsync(id, cancellationToken));
     }
 
-    public async Task<Result> DeleteAsync(int id, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var category = await categories.GetByIdAsync(id, cancellationToken);
         if (category is null)
@@ -104,23 +104,23 @@ internal sealed partial class CategoryService(
 
     [LoggerMessage(EventId = LogEvents.CategoryCreated, Level = LogLevel.Information,
         Message = "Created category {CategoryId} '{CategoryName}' with monthly budget {MonthlyBudget}")]
-    private static partial void LogCategoryCreated(ILogger logger, int categoryId, string categoryName, decimal? monthlyBudget);
+    private static partial void LogCategoryCreated(ILogger logger, Guid categoryId, string categoryName, decimal? monthlyBudget);
 
     [LoggerMessage(EventId = LogEvents.CategoryUpdated, Level = LogLevel.Information,
         Message = "Updated category {CategoryId}: name '{PreviousName}' → '{CategoryName}', budget {PreviousBudget} → {MonthlyBudget}")]
     private static partial void LogCategoryUpdated(
-        ILogger logger, int categoryId, string previousName, string categoryName, decimal? previousBudget, decimal? monthlyBudget);
+        ILogger logger, Guid categoryId, string previousName, string categoryName, decimal? previousBudget, decimal? monthlyBudget);
 
     [LoggerMessage(EventId = LogEvents.CategoryDeleted, Level = LogLevel.Information,
         Message = "Deleted category {CategoryId} '{CategoryName}'")]
-    private static partial void LogCategoryDeleted(ILogger logger, int categoryId, string categoryName);
+    private static partial void LogCategoryDeleted(ILogger logger, Guid categoryId, string categoryName);
 
     [LoggerMessage(EventId = LogEvents.CategoryNotFound, Level = LogLevel.Warning, Message = "Category {CategoryId} was not found")]
-    private static partial void LogCategoryNotFound(ILogger logger, int categoryId);
+    private static partial void LogCategoryNotFound(ILogger logger, Guid categoryId);
 
     [LoggerMessage(EventId = LogEvents.CategoryInUse, Level = LogLevel.Warning,
         Message = "Refused to delete category {CategoryId} '{CategoryName}': {ExpenseCount} expense(s) still use it")]
-    private static partial void LogCategoryInUse(ILogger logger, int categoryId, string categoryName, int expenseCount);
+    private static partial void LogCategoryInUse(ILogger logger, Guid categoryId, string categoryName, int expenseCount);
 
     [LoggerMessage(EventId = LogEvents.CategoriesListed, Level = LogLevel.Debug,
         Message = "Listed {ItemCount} of {TotalCount} categories (page {Page}, size {PageSize}, sort {SortBy})")]

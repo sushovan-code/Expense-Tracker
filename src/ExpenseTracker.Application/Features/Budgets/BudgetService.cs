@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace ExpenseTracker.Application.Features.Budgets;
 
 public sealed record BudgetStatusDto(
-    int CategoryId,
+    Guid CategoryId,
     string CategoryName,
     string CategoryColor,
     decimal Budget,
@@ -27,7 +27,7 @@ public interface IBudgetService
 /// <summary>Used by other use cases to detect the moment a category goes over its budget.</summary>
 internal interface IBudgetMonitor
 {
-    Task<BudgetAlert?> DetectOverrunAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken);
+    Task<BudgetAlert?> DetectOverrunAsync(Guid categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken);
 }
 
 internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider clock, ILogger<BudgetService> logger)
@@ -47,7 +47,7 @@ internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider
         return new BudgetOverviewDto(from.Year, from.Month, statuses.Sum(s => s.Budget), statuses.Sum(s => s.Spent), statuses);
     }
 
-    public async Task<BudgetAlert?> DetectOverrunAsync(int categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken)
+    public async Task<BudgetAlert?> DetectOverrunAsync(Guid categoryId, DateOnly date, decimal addedAmount, CancellationToken cancellationToken)
     {
         if (addedAmount <= 0) return null;
 
@@ -72,5 +72,5 @@ internal sealed partial class BudgetService(IBudgetQueries queries, TimeProvider
     [LoggerMessage(EventId = LogEvents.BudgetExceeded, Level = LogLevel.Warning,
         Message = "Category {CategoryId} '{CategoryName}' exceeded its monthly budget for {Year}-{Month}: spent {Spent} of {Budget}")]
     private static partial void LogBudgetExceeded(
-        ILogger logger, int categoryId, string categoryName, decimal spent, decimal budget, int year, int month);
+        ILogger logger, Guid categoryId, string categoryName, decimal spent, decimal budget, int year, int month);
 }

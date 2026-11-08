@@ -23,7 +23,7 @@ Tick an item when its PR merges. Status after branch `chore/adopt-standards` (20
   - [x] Add a `docs/adr/` folder for architecture decision records.
 - [x] **M: move the frontend** from `src/ExpenseTracker.Web` to `src/web/expense-tracker-web`, and update the AppHost `AddViteApp` path, CI, README and the CLAUDE.md commands.
 - [ ] **M: organise Application as vertical slices**, for example `Application/Expenses/CreateExpense/{CreateExpense,CreateExpenseHandler,CreateExpenseValidator}.cs`. Today `Features/Expenses/ExpenseService.cs` holds 8 use cases. **Deferred** to the family-groups slice (`roadmap.md` 2), which rewrites these use cases anyway.
-- [ ] **M: make AppHost start the local dependencies.** It runs only the API and Vite, with no SQL Server or Redis container. The API needs LocalDB, which is Windows-only. **Deferred:** the SQLite slice removes the database dependency. Redis needs new packages, which need approval.
+- [ ] **M: make AppHost start the local dependencies.** It runs only the API and Vite, with no SQL Server or Redis container. The API needs LocalDB, which is Windows-only. *Database part done:* SQLite needs no container. **Still deferred:** Redis needs new packages, which need approval.
 - [x] **L: align the test project names** with `ExpenseTracker.UnitTests` and `ExpenseTracker.IntegrationTests`, or keep the split by layer (`Domain.Tests`, `Application.Tests`, `ArchitectureTests`) and record that choice in an ADR. *Done:* the split by layer is kept and recorded in ADR 0004.
 - [x] **L: fix the README.** It says "warnings as errors", but `Directory.Build.props` sets `TreatWarningsAsErrors=false`, which is what the standard asks for.
 
@@ -58,7 +58,7 @@ Tick an item when its PR merges. Status after branch `chore/adopt-standards` (20
   - `CorsSettings` is read inline twice.
   - `IdentitySettings` isn't validated.
   - The connection string is checked by hand, and `AddInfrastructure(configuration, environmentName)` takes the environment name only for an error message.
-- [ ] **M: choose adapters by configuration.** **Deferred** to the SQLite slice (database). Redis needs package approval.
+- [ ] **M: choose adapters by configuration.** *Database:* SQLite replaced SQL Server, behind the same ports; a provider switch comes with MongoDB (ADR 0001). **Still deferred:** Redis needs package approval.
   - SQL Server is hard-wired.
   - `AddHybridCache()` has no Redis L2.
   - There's no `Cache:Provider` (or similar) switch.
@@ -82,7 +82,7 @@ Tick an item when its PR merges. Status after branch `chore/adopt-standards` (20
   - [x] The text "up to 10,000 rows" in `ExpenseEndpoints` duplicates `ExpenseService.MaxExportRows`.
 - [x] **M: make user creation atomic.** `UserAdminService.CreateAsync` creates the user, then adds roles, and deletes the user again if that fails. Use a transaction instead.
 - [ ] **M: shorten long methods** to under 30 lines. For example `UserAdminService.ListAsync` is about 45 lines, and `UserAdminService.cs` is 395 lines. *Partly done:* `ListAsync` is split. The rest of `UserAdminService` is **deferred** with the identity decision above.
-- [ ] **M: make time handling consistent.** **Deferred:** changing the `CreatedAt` type needs a migration (SQLite slice). The meaning of "current month" depends on a family time zone (family groups).
+- [ ] **M: make time handling consistent.** *`CreatedAt` done:* `Expense.CreatedAt` is now a `DateTimeOffset`, like the identity entities. **Still deferred:** The meaning of "current month" depends on a family time zone (family groups).
   - `Expense.CreatedAt` is a `DateTime`, while the identity entities use `DateTimeOffset`.
   - `BudgetService.GetOverviewAsync` and the CSV filename use `GetLocalNow()`, so the server's time zone decides the "current month".
 - [x] **L: decide on the frontend libraries.** The code uses hand-rolled validation instead of React Hook Form with a schema, TanStack Table instead of AG Grid, its own toasts instead of Sonner, and oxlint instead of ESLint and Prettier. Switching adds dependencies, so record the choice in an ADR or approve the switch. *Done:* ADR 0003. It also records three toast differences, left unchanged to keep the look and feel.
@@ -94,7 +94,7 @@ Tick an item when its PR merges. Status after branch `chore/adopt-standards` (20
 
 All **deferred** to a later pass, per the owner. The isolation item moves to the SQLite slice. One test was added for the new security headers.
 
-- [ ] **H: isolate the integration tests.** `ApiFactory` shares one LocalDB database across tests. Move to Testcontainers (SQL Server) and reset data with Respawn.
+- [x] **H: isolate the integration tests.** `ApiFactory` shares one LocalDB database across tests. Move to Testcontainers (SQL Server) and reset data with Respawn. *Done in `chore/sqlite-guid-ids`:* a fresh SQLite file per test class, no Docker, and CI runs them on Linux.
 - [ ] **H: add unauthenticated and unauthorised tests for every endpoint.** Today only 3 GETs are checked. Missing:
   - [ ] expense PUT and DELETE, bulk delete, export
   - [ ] category CRUD, budgets

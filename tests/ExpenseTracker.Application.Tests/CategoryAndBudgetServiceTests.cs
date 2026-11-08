@@ -39,10 +39,10 @@ public class CategoryServiceTests
     public async Task Delete_is_a_conflict_while_expenses_use_the_category()
     {
         var food = Category.Create("Food", "#f97316", null).Value!;
-        _categories.GetByIdAsync(1, Ct).Returns(food);
-        _categories.CountExpensesAsync(1, Ct).Returns(3);
+        _categories.GetByIdAsync(TestIds.Of(1), Ct).Returns(food);
+        _categories.CountExpensesAsync(TestIds.Of(1), Ct).Returns(3);
 
-        var result = await _service.DeleteAsync(1, Ct);
+        var result = await _service.DeleteAsync(TestIds.Of(1), Ct);
 
         result.Error!.Kind.ShouldBe(ErrorKind.Conflict);
         _categories.DidNotReceiveWithAnyArgs().Remove(default!);
@@ -52,13 +52,13 @@ public class CategoryServiceTests
     public async Task Delete_removes_an_unused_category_and_notifies()
     {
         var food = Category.Create("Food", "#f97316", null).Value!;
-        _categories.GetByIdAsync(1, Ct).Returns(food);
+        _categories.GetByIdAsync(TestIds.Of(1), Ct).Returns(food);
 
-        var result = await _service.DeleteAsync(1, Ct);
+        var result = await _service.DeleteAsync(TestIds.Of(1), Ct);
 
         result.IsSuccess.ShouldBeTrue();
         _categories.Received(1).Remove(food);
-        await _notifier.Received(1).CategoriesChangedAsync(ChangeAction.Deleted, Arg.Any<IReadOnlyCollection<int>>(), Ct);
+        await _notifier.Received(1).CategoriesChangedAsync(ChangeAction.Deleted, Arg.Any<IReadOnlyCollection<Guid>>(), Ct);
     }
 }
 
@@ -73,15 +73,15 @@ public class BudgetServiceTests
         _service = new BudgetService(_queries, new FixedTimeProvider(), NullLogger<BudgetService>.Instance);
 
     private void Spent(decimal? budget, decimal spent) =>
-        _queries.GetCategorySpendingAsync(1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), Ct)
-            .Returns(new CategorySpending(1, "Food", "#f97316", budget, spent));
+        _queries.GetCategorySpendingAsync(TestIds.Of(1), new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), Ct)
+            .Returns(new CategorySpending(TestIds.Of(1), "Food", "#f97316", budget, spent));
 
     [Fact]
     public async Task Alerts_when_an_addition_crosses_the_budget()
     {
         Spent(budget: 100m, spent: 130m);
 
-        var alert = await _service.DetectOverrunAsync(1, October5, addedAmount: 50m, Ct);
+        var alert = await _service.DetectOverrunAsync(TestIds.Of(1), October5, addedAmount: 50m, Ct);
 
         alert.ShouldNotBeNull();
         alert.Spent.ShouldBe(130m);
@@ -92,7 +92,7 @@ public class BudgetServiceTests
     {
         Spent(budget: 100m, spent: 180m);
 
-        (await _service.DetectOverrunAsync(1, October5, addedAmount: 50m, Ct)).ShouldBeNull();
+        (await _service.DetectOverrunAsync(TestIds.Of(1), October5, addedAmount: 50m, Ct)).ShouldBeNull();
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class BudgetServiceTests
     {
         Spent(budget: null, spent: 1_000m);
 
-        (await _service.DetectOverrunAsync(1, October5, addedAmount: 1_000m, Ct)).ShouldBeNull();
+        (await _service.DetectOverrunAsync(TestIds.Of(1), October5, addedAmount: 1_000m, Ct)).ShouldBeNull();
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public class BudgetServiceTests
     {
         _queries.GetBudgetedSpendingAsync(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), Ct).Returns(
         [
-            new CategorySpending(1, "Food", "#f97316", 100m, 50m),
-            new CategorySpending(2, "Rent", "#8b5cf6", 100m, 90m),
-            new CategorySpending(3, "Fun", "#ec4899", 100m, 150m),
+            new CategorySpending(TestIds.Of(1), "Food", "#f97316", 100m, 50m),
+            new CategorySpending(TestIds.Of(2), "Rent", "#8b5cf6", 100m, 90m),
+            new CategorySpending(TestIds.Of(3), "Fun", "#ec4899", 100m, 150m),
         ]);
 
         var overview = await _service.GetOverviewAsync(null, null, Ct);

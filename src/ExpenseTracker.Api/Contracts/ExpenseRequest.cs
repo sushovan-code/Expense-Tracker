@@ -15,8 +15,8 @@ public sealed record ExpenseRequest(
     decimal Amount,
     [property: Description("Date of the expense (YYYY-MM-DD).")]
     DateOnly Date,
-    [property: Range(1, int.MaxValue), Description("Id of an existing category.")]
-    int CategoryId,
+    [property: Required, Description("Id of an existing category.")]
+    Guid CategoryId,
     [property: StringLength(Expense.NotesMaxLength)]
     string? Notes)
 {

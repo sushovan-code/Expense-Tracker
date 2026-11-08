@@ -1,7 +1,7 @@
 import type { SortDirection } from '@/shared/types'
 
 export interface Category {
-  id: number
+  id: string
   name: string
   color: string
   monthlyBudget: number | null
@@ -10,7 +10,7 @@ export interface Category {
 
 /** Minimal category shape for dropdowns and filters. */
 export interface CategoryLookup {
-  id: number
+  id: string
   name: string
   color: string
 }

@@ -6,7 +6,7 @@ namespace ExpenseTracker.Application.Abstractions.Realtime;
 /// </summary>
 public interface IChangeNotifier
 {
-    Task ExpensesChangedAsync(ChangeAction action, IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
-    Task CategoriesChangedAsync(ChangeAction action, IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
+    Task ExpensesChangedAsync(ChangeAction action, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+    Task CategoriesChangedAsync(ChangeAction action, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
     Task BudgetExceededAsync(BudgetAlert alert, CancellationToken cancellationToken);
 }

@@ -12,11 +12,11 @@ internal sealed partial class SignalRChangeNotifier(
 {
     public const string ClientIdHeader = "X-Client-Id";
 
-    public Task ExpensesChangedAsync(ChangeAction action, IReadOnlyCollection<int> ids, CancellationToken cancellationToken) =>
+    public Task ExpensesChangedAsync(ChangeAction action, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         SendAsync(nameof(IExpenseHubClient.ExpensesChanged), ids.Count,
             () => hub.Clients.All.ExpensesChanged(new ChangeNotice(ToWire(action), ids, OriginClientId)));
 
-    public Task CategoriesChangedAsync(ChangeAction action, IReadOnlyCollection<int> ids, CancellationToken cancellationToken) =>
+    public Task CategoriesChangedAsync(ChangeAction action, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         SendAsync(nameof(IExpenseHubClient.CategoriesChanged), ids.Count,
             () => hub.Clients.All.CategoriesChanged(new ChangeNotice(ToWire(action), ids, OriginClientId)));
 

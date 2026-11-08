@@ -1,0 +1,23 @@
+%% Add an expense, with live updates and a budget alert. Claude rewrites this via /update-diagrams.
+sequenceDiagram
+  autonumber
+  actor U as Family member
+  participant W as Web app
+  participant A as API (ExpenseService)
+  participant D as SQLite
+  participant H as SignalR hub
+  participant O as Other open tabs
+
+  U->>W: save the expense form
+  W->>A: POST /api/expenses
+  Note over A: check permission expense.add,<br/>validate contract and domain rules
+  A->>D: insert the expense (GUID v7 id)
+  A->>D: sum this month's spending in the category
+  A->>H: expenses changed
+  H-->>O: change notice, so cached queries refresh
+  opt the category just went over budget
+    A->>H: budget exceeded
+    H-->>W: alert toast
+    H-->>O: alert toast
+  end
+  A-->>W: 201 Created

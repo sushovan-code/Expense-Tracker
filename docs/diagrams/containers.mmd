@@ -4,19 +4,20 @@ flowchart LR
   classDef ours fill:#DBEAFE,stroke:#2563EB,color:#0F172A
   classDef ext fill:#F1F5F9,stroke:#94A3B8,color:#334155,stroke-dasharray:4 3
 
-  user([User])
-  web[Web app<br/><small>Angular or React SPA</small>]:::ours
-  api[API<br/><small>.NET 10 Minimal API</small>]:::ours
-  db[(Database)]:::ours
-  cache[(Redis cache)]:::ours
-  idp[Identity provider<br/><small>Auth0 / Keycloak / ASP.NET Core Identity</small>]:::ext
+  user([Family member])
+  web[Web app<br/><small>React + TypeScript SPA, Vite</small>]:::ours
+  api[API<br/><small>.NET 10 Minimal API, SignalR hub,<br/>ASP.NET Core Identity + JWT</small>]:::ours
+  cache[(HybridCache<br/><small>in-memory, user access snapshots</small>)]:::ours
+  db[(SQLite file<br/><small>EF Core: expenses, categories,<br/>users, roles, sessions, API keys</small>)]:::ours
+  dashboard[Aspire dashboard<br/><small>development only</small>]:::ext
 
   user --> web
-  web -->|HTTPS, JSON| api
-  web -->|OIDC login| idp
-  api --> db
+  web -->|HTTPS, JSON, bearer token| api
+  api -. SignalR: changes, budget alerts .-> web
   api --> cache
-  api -. SignalR toasts .-> web
+  api -->|EF Core| db
+  api -. OTLP .-> dashboard
+  web -. OTLP over HTTP .-> dashboard
 
   subgraph Legend
     direction LR

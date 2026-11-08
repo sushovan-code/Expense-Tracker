@@ -23,5 +23,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // SQLite has no DateTimeOffset type: stored as UTC ticks so comparisons and ordering run in SQL (ADR 0001).
+        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcTicksConverter>();
+        configurationBuilder.Properties<DateTimeOffset?>().HaveConversion<UtcTicksConverter>();
+    }
+
     Task IUnitOfWork.SaveChangesAsync(CancellationToken cancellationToken) => SaveChangesAsync(cancellationToken);
 }

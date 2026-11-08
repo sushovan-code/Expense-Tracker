@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace ExpenseTracker.Api.IntegrationTests;
 
-/// <summary>End-to-end through HTTP: routing, validation, use cases, EF Core/SQL Server and problem details.</summary>
+/// <summary>End-to-end through HTTP: routing, validation, use cases, EF Core/SQLite and problem details.</summary>
 public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     // Signed in as a regular User: holds every expense/category permission, and nothing administrative.
@@ -21,18 +21,18 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     }
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    private sealed record Lookup(int Id, string Name, string Color);
-    private sealed record ExpenseDto(int Id, string Description, decimal Amount, DateOnly Date, int CategoryId, string CategoryName);
+    private sealed record Lookup(Guid Id, string Name, string Color);
+    private sealed record ExpenseDto(Guid Id, string Description, decimal Amount, DateOnly Date, Guid CategoryId, string CategoryName);
     private sealed record ExpensePage(List<ExpenseDto> Items, int Page, int PageSize, int TotalCount, int TotalPages, decimal TotalAmount);
     private sealed record Problem(int Status, string? Title, string? Detail, Dictionary<string, string[]>? Errors);
-    private sealed record CategoryDto(int Id, string Name, decimal? MonthlyBudget, int ExpenseCount);
+    private sealed record CategoryDto(Guid Id, string Name, decimal? MonthlyBudget, int ExpenseCount);
     private sealed record BudgetOverview(List<BudgetStatus> Categories);
-    private sealed record BudgetStatus(int CategoryId, decimal Budget, decimal Spent, [property: JsonPropertyName("state")] string State);
+    private sealed record BudgetStatus(Guid CategoryId, decimal Budget, decimal Spent, [property: JsonPropertyName("state")] string State);
 
-    private async Task<int> CategoryId(string name) =>
+    private async Task<Guid> CategoryId(string name) =>
         (await _client.GetFromJsonAsync<List<Lookup>>("/api/categories/lookup", Ct))!.Single(c => c.Name == name).Id;
 
-    private async Task<ExpenseDto> CreateExpense(string description, decimal amount, int categoryId, string date = "2026-10-05")
+    private async Task<ExpenseDto> CreateExpense(string description, decimal amount, Guid categoryId, string date = "2026-10-05")
     {
         var response = await _client.PostAsJsonAsync("/api/expenses", new { description, amount, date, categoryId }, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
@@ -88,7 +88,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Request_validation_reports_each_invalid_field()
     {
-        var response = await _client.PostAsJsonAsync("/api/expenses", new { description = "", amount = 0, date = "2026-10-05", categoryId = 1 }, Ct);
+        var response = await _client.PostAsJsonAsync("/api/expenses", new { description = "", amount = 0, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<Problem>(Json, Ct);
@@ -106,9 +106,19 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     }
 
     [Fact]
+    public async Task ListExpenses_SearchInDifferentCase_FindsTheExpense()
+    {
+        var expense = await CreateExpense("Weekly SHOP 50%_off", 20m, await CategoryId("Food"));
+
+        var page = await _client.GetFromJsonAsync<ExpensePage>("/api/expenses?search=shop%2050%25_OFF", Json, Ct);
+
+        page!.Items.Select(e => e.Id).ShouldBe([expense.Id]);
+    }
+
+    [Fact]
     public async Task Unknown_ids_return_not_found_problems()
     {
-        var response = await _client.GetAsync("/api/expenses/987654", Ct);
+        var response = await _client.GetAsync($"/api/expenses/{Guid.NewGuid()}", Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await response.Content.ReadFromJsonAsync<Problem>(Json, Ct))!.Title.ShouldBe("Expense not found");
@@ -160,7 +170,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
         var a = await CreateExpense("bulk-test a", 1m, categoryId);
         var b = await CreateExpense("bulk-test b", 2m, categoryId);
 
-        var response = await _client.PostAsJsonAsync("/api/expenses/bulk-delete", new { ids = new[] { a.Id, b.Id, 999_999 } }, Ct);
+        var response = await _client.PostAsJsonAsync("/api/expenses/bulk-delete", new { ids = new[] { a.Id, b.Id, Guid.NewGuid() } }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var remaining = await _client.GetFromJsonAsync<ExpensePage>("/api/expenses?search=bulk-test", Json, Ct);

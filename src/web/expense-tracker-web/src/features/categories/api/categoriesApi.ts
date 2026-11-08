@@ -8,8 +8,8 @@ export interface CategoriesApi {
   /** Every category (id, name, color) for dropdowns and filters. */
   lookup(): Promise<CategoryLookup[]>
   create(input: CategoryInput): Promise<Category>
-  update(id: number, input: CategoryInput): Promise<Category>
-  remove(id: number): Promise<void>
+  update(id: string, input: CategoryInput): Promise<Category>
+  remove(id: string): Promise<void>
 }
 
 export const CategoriesApiToken = createServiceToken<CategoriesApi>('CategoriesApi')

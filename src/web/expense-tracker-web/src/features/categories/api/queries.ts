@@ -35,9 +35,9 @@ export function useCategoryMutations() {
   return {
     create: useMutation({ mutationFn: (input: CategoryInput) => api.create(input), onSuccess: invalidate }),
     update: useMutation({
-      mutationFn: ({ id, input }: { id: number; input: CategoryInput }) => api.update(id, input),
+      mutationFn: ({ id, input }: { id: string; input: CategoryInput }) => api.update(id, input),
       onSuccess: invalidate,
     }),
-    remove: useMutation({ mutationFn: (id: number) => api.remove(id), onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: (id: string) => api.remove(id), onSuccess: invalidate }),
   }
 }

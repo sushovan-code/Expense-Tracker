@@ -297,7 +297,7 @@ function EditRow({ edit, categories, selectable, onChange, onSave, onCancel }: E
         </div>
       </td>
       <td className="col-category">
-        <select value={draft.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))} aria-label="Category" {...invalid('categoryId')}>
+        <select value={draft.categoryId} onChange={(e) => set('categoryId', e.target.value)} aria-label="Category" {...invalid('categoryId')}>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}

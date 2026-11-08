@@ -37,7 +37,7 @@ internal static class ExpenseEndpoints
             .WithDescription("Totals for a date range, broken down by category and by month.")
             .ProducesValidationProblem();
 
-        group.MapGet("/{id:int}", Get)
+        group.MapGet("/{id:guid}", Get)
             .RequirePermission(Permissions.Expenses.View)
             .WithName("GetExpense")
             .WithSummary("Get an expense")
@@ -49,14 +49,14 @@ internal static class ExpenseEndpoints
             .WithSummary("Create an expense")
             .ProducesValidationProblem();
 
-        group.MapPut("/{id:int}", Update)
+        group.MapPut("/{id:guid}", Update)
             .RequirePermission(Permissions.Expenses.Edit)
             .WithName("UpdateExpense")
             .WithSummary("Update an expense")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapDelete("/{id:int}", Delete)
+        group.MapDelete("/{id:guid}", Delete)
             .RequirePermission(Permissions.Expenses.Delete)
             .WithName("DeleteExpense")
             .WithSummary("Delete an expense")
@@ -86,7 +86,7 @@ internal static class ExpenseEndpoints
         (await service.SummarizeAsync(query.From, query.To, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<Ok<ExpenseDto>, ProblemHttpResult>> Get(
-        int id, IExpenseService service, CancellationToken cancellationToken) =>
+        Guid id, IExpenseService service, CancellationToken cancellationToken) =>
         (await service.GetAsync(id, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<CreatedAtRoute<ExpenseDto>, ProblemHttpResult>> Create(
@@ -95,11 +95,11 @@ internal static class ExpenseEndpoints
             .ToHttpResult(e => TypedResults.CreatedAtRoute(e, "GetExpense", new { id = e.Id }));
 
     private static async Task<Results<Ok<ExpenseDto>, ProblemHttpResult>> Update(
-        int id, ExpenseRequest request, IExpenseService service, CancellationToken cancellationToken) =>
+        Guid id, ExpenseRequest request, IExpenseService service, CancellationToken cancellationToken) =>
         (await service.UpdateAsync(id, request.ToCommand(), cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<NoContent, ProblemHttpResult>> Delete(
-        int id, IExpenseService service, CancellationToken cancellationToken) =>
+        Guid id, IExpenseService service, CancellationToken cancellationToken) =>
         (await service.DeleteAsync(id, cancellationToken)).ToHttpResult();
 
     private static async Task<Results<Ok<BulkDeleteResult>, ProblemHttpResult>> BulkDelete(

@@ -51,8 +51,9 @@ internal sealed partial class UserAdminService(
         IQueryable<AppUser> query = dbContext.Users.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var search = request.Search.Trim();
-            query = query.Where(u => u.Email!.Contains(search) || u.DisplayName.Contains(search));
+            var pattern = LikePatterns.Contains(request.Search.Trim());
+            query = query.Where(u => EF.Functions.Like(u.Email!, pattern, LikePatterns.EscapeCharacter)
+                || EF.Functions.Like(u.DisplayName, pattern, LikePatterns.EscapeCharacter));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Role))

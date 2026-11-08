@@ -6,5 +6,5 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations;
 
 internal sealed class UserRoleConfiguration : IEntityTypeConfiguration<IdentityUserRole<Guid>>
 {
-    public void Configure(EntityTypeBuilder<IdentityUserRole<Guid>> builder) => builder.ToTable("UserRoles", AuthSchema.Name);
+    public void Configure(EntityTypeBuilder<IdentityUserRole<Guid>> builder) => builder.ToTable("UserRoles");
 }

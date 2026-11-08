@@ -8,9 +8,9 @@ export interface ExpensesApi {
   list(query: ExpenseQuery): Promise<ExpensePage>
   summary(from?: IsoDate, to?: IsoDate): Promise<ExpenseSummary>
   create(input: ExpenseInput): Promise<Expense>
-  update(id: number, input: ExpenseInput): Promise<Expense>
-  remove(id: number): Promise<void>
-  bulkRemove(ids: number[]): Promise<BulkDeleteResult>
+  update(id: string, input: ExpenseInput): Promise<Expense>
+  remove(id: string): Promise<void>
+  bulkRemove(ids: string[]): Promise<BulkDeleteResult>
   /** Downloads a CSV of the filtered, sorted expenses; returns the saved file name. */
   exportCsv(query: Omit<ExpenseQuery, 'page' | 'pageSize'>): Promise<string>
 }

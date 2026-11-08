@@ -7,10 +7,10 @@ public sealed record CategoryCommand(string Name, string Color, decimal? Monthly
 
 public sealed record CategoryListRequest(string? Search, PageRequest Page, string? SortBy, string? SortDir);
 
-public sealed record CategoryDto(int Id, string Name, string Color, decimal? MonthlyBudget, int ExpenseCount);
+public sealed record CategoryDto(Guid Id, string Name, string Color, decimal? MonthlyBudget, int ExpenseCount);
 
 /// <summary>Minimal shape for dropdowns and filters.</summary>
-public sealed record CategoryLookupDto(int Id, string Name, string Color);
+public sealed record CategoryLookupDto(Guid Id, string Name, string Color);
 
 public static class CategorySorting
 {

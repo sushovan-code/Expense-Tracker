@@ -6,10 +6,13 @@ namespace ExpenseTracker.Infrastructure.Persistence.Configurations;
 
 internal sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
 {
+    private const int DisplayNameMaxLength = 100;
+
     public void Configure(EntityTypeBuilder<AppUser> builder)
     {
-        builder.ToTable("Users", AuthSchema.Name);
-        builder.Property(u => u.DisplayName).HasMaxLength(100);
+        builder.ToTable("Users");
+        builder.Property(u => u.DisplayName).HasMaxLength(DisplayNameMaxLength).UseCollation(SqliteCollations.CaseInsensitive);
+        builder.Property(u => u.Email).UseCollation(SqliteCollations.CaseInsensitive);
         builder.Property(u => u.IsActive).HasDefaultValue(true);
     }
 }

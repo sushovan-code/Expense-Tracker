@@ -12,8 +12,10 @@ The API stores data in SQL Server through EF Core and runs locally against SQL S
 3. Work around SQLite's gaps in Infrastructure:
    - `DateTimeOffset` is stored as UTC ticks so it can be compared and sorted in SQL.
    - There are no schemas.
-   - Text columns use a `NOCASE` collation, so search stays case-insensitive.
-4. New tables use app-generated `Guid` IDs.
+   - Searched and unique text columns use a `NOCASE` collation, so duplicate-name checks ignore case.
+   - Text search uses an escaped `LIKE` pattern (`LikePatterns`), because the `instr()` that EF Core generates for `Contains` ignores collations and is case-sensitive.
+   - SQLite stores `decimal` as text; EF Core translates comparisons, ordering and sums for it, so amounts need no change.
+4. Every entity uses an app-generated **GUID v7** ID (`Entity.Id`), including `Expense` and `Category`, which used database-generated integers. IDs exist before saving, sort by creation time and fit any store, MongoDB included. The default categories keep fixed GUIDs in the seed data.
 
 ## Consequences
 - The app runs with no database prerequisite on Windows, macOS and Linux, and CI runs every test.

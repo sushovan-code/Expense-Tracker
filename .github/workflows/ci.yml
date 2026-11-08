@@ -33,13 +33,9 @@ jobs:
       - name: Check formatting (whitespace and error-level rules only, so warnings don't fail CI)
         run: dotnet format --verify-no-changes --no-restore --severity error
 
-      # The integration tests need SQL Server LocalDB (Windows only), so CI runs the unit and
-      # architecture tests until the SQLite slice (docs/roadmap.md, slice 1) makes them portable.
-      - name: Backend tests (unit and architecture)
-        run: |
-          for project in tests/ExpenseTracker.Domain.Tests tests/ExpenseTracker.Application.Tests tests/ExpenseTracker.ArchitectureTests; do
-            dotnet test --project "$project" --no-build --configuration Release
-          done
+      # Unit, architecture and integration tests. The integration tests use a throwaway SQLite file each.
+      - name: Backend tests
+        run: dotnet test --solution ExpenseTracker.slnx --no-build --configuration Release
 
       - uses: actions/setup-node@v4
         with:

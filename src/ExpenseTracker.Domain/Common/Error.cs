@@ -4,9 +4,6 @@ namespace ExpenseTracker.Domain.Common;
 /// <param name="Field">For validation errors: the input field (camelCase) the error belongs to.</param>
 public sealed record Error(ErrorKind Kind, string Title, string Detail, string? Field = null)
 {
-    public static Error NotFound(string resource, int id) =>
-        new(ErrorKind.NotFound, $"{resource} not found", $"{resource} with id {id} does not exist.");
-
     public static Error NotFound(string resource, Guid id) =>
         new(ErrorKind.NotFound, $"{resource} not found", $"{resource} with id {id} does not exist.");
 

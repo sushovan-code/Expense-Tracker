@@ -8,7 +8,7 @@ internal sealed class AppRoleConfiguration : IEntityTypeConfiguration<AppRole>
 {
     public void Configure(EntityTypeBuilder<AppRole> builder)
     {
-        builder.ToTable("Roles", AuthSchema.Name);
+        builder.ToTable("Roles");
         builder.Property(r => r.Description).HasMaxLength(300);
     }
 }
