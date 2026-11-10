@@ -11,6 +11,8 @@ public sealed record CurrentUserDto(
 
 public sealed record LoginCommand(string Email, string Password);
 
+public sealed record RegisterCommand(string Email, string DisplayName, string Password);
+
 public sealed record ChangePasswordCommand(string CurrentPassword, string NewPassword);
 
 /// <summary>A signed-in session: a short-lived access token plus the refresh token that renews it.</summary>

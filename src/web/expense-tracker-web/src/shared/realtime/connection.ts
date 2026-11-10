@@ -6,6 +6,7 @@ import {
   type ILogger,
 } from '@microsoft/signalr'
 import { API_BASE_URL } from '@/shared/config/env'
+import { getActiveFamilyId } from '@/shared/family/activeFamily'
 import { CLIENT_ID } from '@/shared/lib/clientId'
 import { logger } from '@/shared/telemetry'
 
@@ -53,7 +54,9 @@ const SERVER_EVENTS = ['ExpensesChanged', 'CategoriesChanged', 'BudgetExceeded',
 /** `/api/v1` → `/hubs/expenses` (same origin, proxied in dev); absolute API URL → same host. */
 function hubUrl(): string {
   const base = /^https?:\/\//.test(API_BASE_URL) ? new URL(API_BASE_URL).origin : ''
-  return `${base}/hubs/expenses?clientId=${encodeURIComponent(CLIENT_ID)}`
+  const familyId = getActiveFamilyId()
+  const family = familyId ? `&familyId=${encodeURIComponent(familyId)}` : ''
+  return `${base}/hubs/expenses?clientId=${encodeURIComponent(CLIENT_ID)}${family}`
 }
 
 /** Routes SignalR's own diagnostics into the app logger (warnings and errors only). */

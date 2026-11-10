@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { errorMessage, fieldErrorsOf } from '@/shared/lib/errors'
 import { useToast } from '@/shared/toast/toast'
 import { Field } from '@/shared/ui/Field'
@@ -17,6 +17,7 @@ export function FamilyNameForm({ initialName = '', submitLabel, onSubmit }: Fami
   const [error, setError] = useState<string>()
   const [saving, setSaving] = useState(false)
   const toast = useToast()
+  const inputId = useId() // the Rename form and the New family dialog can be on screen together
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -39,8 +40,8 @@ export function FamilyNameForm({ initialName = '', submitLabel, onSubmit }: Fami
 
   return (
     <form className="form" onSubmit={submit} noValidate>
-      <Field label="Family name" error={error} htmlFor="family-name">
-        <input id="family-name" className="input" value={name} maxLength={NAME_MAX_LENGTH} placeholder="e.g. The Sharma family" onChange={(e) => setName(e.target.value)} />
+      <Field label="Family name" error={error} htmlFor={inputId}>
+        <input id={inputId} className="input" value={name} maxLength={NAME_MAX_LENGTH} placeholder="e.g. The Sharma family" onChange={(e) => setName(e.target.value)} />
       </Field>
       <div className="form-actions">
         <button type="submit" className="button button--primary" disabled={saving}>

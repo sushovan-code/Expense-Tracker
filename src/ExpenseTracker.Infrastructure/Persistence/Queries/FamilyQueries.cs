@@ -7,11 +7,13 @@ namespace ExpenseTracker.Infrastructure.Persistence.Queries;
 
 internal sealed class FamilyQueries(AppDbContext dbContext) : IFamilyQueries
 {
-    public Task<FamilyMembership?> FindMembershipAsync(Guid userId, CancellationToken cancellationToken) =>
-        dbContext.FamilyMembers.AsNoTracking()
+    public async Task<IReadOnlyList<FamilySummaryDto>> ListForUserAsync(Guid userId, CancellationToken cancellationToken) =>
+        await dbContext.FamilyMembers.AsNoTracking()
             .Where(m => m.UserId == userId)
-            .Select(m => new FamilyMembership(m.FamilyId, m.Role))
-            .FirstOrDefaultAsync(cancellationToken);
+            .Join(dbContext.Families, m => m.FamilyId, f => f.Id, (m, f) => new { m.JoinedAt, Summary = new FamilySummaryDto(f.Id, f.Name, m.Role) })
+            .OrderBy(x => x.JoinedAt)
+            .Select(x => x.Summary)
+            .ToListAsync(cancellationToken);
 
     public async Task<FamilyDto?> GetAsync(Guid familyId, DateTimeOffset now, CancellationToken cancellationToken)
     {

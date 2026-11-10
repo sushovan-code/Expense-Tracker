@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { ENV_LABEL } from '@/shared/config/env'
 import { Field } from '@/shared/ui/Field'
 import { AlertTriangleIcon, InfoIcon, LockIcon, WalletIcon } from '@/shared/ui/Icons'
@@ -75,6 +75,10 @@ export function LoginPage() {
             <LockIcon size={16} /> {vm.submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <p className="muted auth-card__footnote">
+          New here? <Link to="/register">Create an account</Link>
+        </p>
 
         <SignInQrButton />
 

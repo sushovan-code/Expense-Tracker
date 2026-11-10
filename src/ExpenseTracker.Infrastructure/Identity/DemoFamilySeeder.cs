@@ -42,6 +42,10 @@ public sealed partial class DemoFamilySeeder(
         created += await SeedFamilyAsync(VermaName, verma,
             [("Electricity bill", 1800m, "Utilities"), ("Movie night", 900m, "Entertainment")], seed.DemoPassword, cancellationToken);
 
+        // One person can own several families: user@ also owns a second one (for the parents).
+        created += await SeedFamilyAsync("Sharma parents", [($"user@{domain}", FamilyRole.Owner)],
+            [("Medicines", 650m, "Health")], seed.DemoPassword, cancellationToken);
+
         LogSeeded(logger, created);
     }
 
@@ -62,8 +66,6 @@ public sealed partial class DemoFamilySeeder(
         foreach (var (email, role) in people)
         {
             var userId = await FindOrCreateUserAsync(email, password);
-            if (await dbContext.FamilyMembers.AnyAsync(m => m.UserId == userId, cancellationToken)) continue;
-
             dbContext.FamilyMembers.Add(FamilyMember.Create(family.Id, userId, role, now));
             if (role == FamilyRole.Owner) owner = userId;
         }

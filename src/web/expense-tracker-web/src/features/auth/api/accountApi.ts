@@ -1,9 +1,11 @@
 import type { HttpClient } from '@/shared/api/httpClient'
 import { createServiceToken } from '@/shared/di/services'
-import type { ApiKey, ApiKeyInput, ChangePasswordInput, CreatedApiKey } from '../model/types'
+import type { ApiKey, ApiKeyInput, ChangePasswordInput, CreatedApiKey, RegisterInput } from '../model/types'
 
 /** Self-service account operations. Sign-in/out and token renewal live in the AuthSession (shared/auth). */
 export interface AccountApi {
+  /** Anonymous self-registration; sign in afterwards. */
+  register(input: RegisterInput): Promise<void>
   changePassword(input: ChangePasswordInput): Promise<void>
   listApiKeys(): Promise<ApiKey[]>
   createApiKey(input: ApiKeyInput): Promise<CreatedApiKey>
@@ -14,6 +16,7 @@ export const AccountApiToken = createServiceToken<AccountApi>('AccountApi')
 
 export function createAccountApi(http: HttpClient): AccountApi {
   return {
+    register: (input) => http.post('/auth/register', input),
     changePassword: (input) => http.post('/auth/change-password', input),
     listApiKeys: () => http.get('/auth/api-keys'),
     createApiKey: (input) => http.post('/auth/api-keys', input),

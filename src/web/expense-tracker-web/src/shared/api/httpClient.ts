@@ -1,5 +1,6 @@
 import { context, SpanStatusCode, trace, type Context, type Span } from '@opentelemetry/api'
 import { createServiceToken } from '@/shared/di/services'
+import { FAMILY_HEADER, getActiveFamilyId } from '@/shared/family/activeFamily'
 import { logger } from '@/shared/telemetry'
 import { toApiError, unreachable } from './apiError'
 
@@ -58,8 +59,10 @@ export function createHttpClient({ baseUrl, clientId, auth, fetch: fetchImpl = g
 
   const headersFor = (body: unknown): Record<string, string> => {
     const token = auth?.getAccessToken()
+    const familyId = getActiveFamilyId()
     return {
       ...baseHeaders,
+      ...(familyId ? { [FAMILY_HEADER]: familyId } : {}),
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     }

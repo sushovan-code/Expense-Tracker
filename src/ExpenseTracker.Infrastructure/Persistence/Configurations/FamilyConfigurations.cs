@@ -21,9 +21,10 @@ internal sealed class FamilyMemberConfiguration : IEntityTypeConfiguration<Famil
         builder.Property(m => m.Id).ValueGeneratedNever();
         builder.Property(m => m.Role).HasConversion<string>().HasMaxLength(20);
 
-        // One family per user.
-        builder.HasIndex(m => m.UserId).IsUnique();
-        builder.HasIndex(m => m.FamilyId);
+        // A person is in a family once. They may own several families; being a Member or Viewer in more than
+        // one is refused by FamilyPolicy, not by the schema.
+        builder.HasIndex(m => new { m.FamilyId, m.UserId }).IsUnique();
+        builder.HasIndex(m => m.UserId);
 
         builder.HasOne<Family>().WithMany().HasForeignKey(m => m.FamilyId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<AppUser>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);

@@ -11,7 +11,11 @@ public static class FamilyErrors
         Error.Forbidden("Your family role doesn't allow this.");
 
     public static readonly Error AlreadyInFamily =
-        Error.Conflict("Already in a family", "This person already belongs to a family.");
+        Error.Conflict("Already in this family", "This person already belongs to this family.");
+
+    public static readonly Error AlreadyMemberElsewhere =
+        Error.Conflict("Already a member of another family",
+            "A person can be a Member or Viewer in only one family. They can still own any number of families.");
 
     public static readonly Error LastOwner =
         Error.Conflict("Last owner", "A family needs at least one owner.");

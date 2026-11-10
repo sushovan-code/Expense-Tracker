@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PUBLIC_URL } from '@/shared/config/env'
+import { switchActiveFamily } from '@/shared/family/activeFamily'
 import { useErrorToast } from '@/shared/hooks/useErrorToast'
 import { errorMessage } from '@/shared/lib/errors'
 import { useSession } from '@/shared/auth/useSession'
@@ -23,6 +24,7 @@ export function useFamilyViewModel() {
   useErrorToast(query.error ?? undefined, "Couldn't load your family")
 
   const [addOpen, setAddOpen] = useState(false)
+  const [newFamilyOpen, setNewFamilyOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [createdInvite, setCreatedInvite] = useState<CreatedInvite | null>(null)
   const [removing, setRemoving] = useState<FamilyMember | null>(null)
@@ -46,6 +48,8 @@ export function useFamilyViewModel() {
     const created = await mutations.create.mutateAsync(name)
     logger.event('family.created', `Family ${created.id} created`, { 'family.id': created.id })
     toast.success('Family created', { description: created.name })
+    // Work in the new family from now on (reloads, which also joins its live-update group).
+    switchActiveFamily(created.id, '/family')
   }
 
   const rename = async (name: string) => {
@@ -75,6 +79,7 @@ export function useFamilyViewModel() {
     changeRole: (member: FamilyMember, role: FamilyRole) =>
       run(() => mutations.changeRole.mutateAsync({ userId: member.userId, role }), 'Role updated', "Couldn't change the role"),
     revokeInvite: (id: string) => run(() => mutations.revokeInvite.mutateAsync(id), 'Invite revoked', "Couldn't revoke the invite"),
+    newFamilyDialog: { isOpen: newFamilyOpen, open: () => setNewFamilyOpen(true), close: () => setNewFamilyOpen(false) },
     addDialog: { isOpen: addOpen, open: () => setAddOpen(true), close: () => setAddOpen(false), submit: addMember },
     inviteDialog: {
       isOpen: inviteOpen,

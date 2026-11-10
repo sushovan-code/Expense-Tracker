@@ -25,6 +25,15 @@ internal static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
+        group.MapPost("/register", Register)
+            .AllowAnonymous()
+            .RequireRateLimiting(AuthSetup.AuthRateLimitPolicy)
+            .WithName("Register")
+            .WithSummary("Create your own account")
+            .WithDescription("Anyone can register with an email that isn't used yet. The account gets the default User role; sign in afterwards.")
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         group.MapPost("/refresh", Refresh)
             .AllowAnonymous()
             .RequireRateLimiting(AuthSetup.AuthRateLimitPolicy)
@@ -90,6 +99,10 @@ internal static class AuthEndpoints
             return TypedResults.Ok(AuthResponse.From(session, clock.GetUtcNow()));
         });
     }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> Register(
+        RegisterRequest request, IRegistrationService registration, CancellationToken cancellationToken) =>
+        (await registration.RegisterAsync(request.ToCommand(), cancellationToken)).ToHttpResult();
 
     private static async Task<Results<Ok<AuthResponse>, ProblemHttpResult>> Refresh(
         IAuthService auth, HttpContext http, TimeProvider clock, CancellationToken cancellationToken)

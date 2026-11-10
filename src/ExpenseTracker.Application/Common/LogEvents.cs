@@ -62,6 +62,7 @@ public static class LogEvents
     public const int UserUnlocked = 6035;
     public const int UserSessionsRevoked = 6036;
     public const int UserDeleted = 6037;
+    public const int UserRegistered = 6038;
     public const int RolePermissionsChanged = 6040;
     public const int AdministrationDenied = 6050;
     public const int IdentitySeeded = 6060;

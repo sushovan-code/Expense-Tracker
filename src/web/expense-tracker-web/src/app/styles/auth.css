@@ -131,6 +131,12 @@
   margin-top: 4px;
 }
 
+/* A line of text under the form, such as a link to the other auth page. (.form-hint is for hints inside a form.) */
+.auth-card__footnote {
+  margin-top: 18px;
+  font-size: 0.82rem;
+}
+
 .auth-alert {
   display: flex;
   align-items: flex-start;

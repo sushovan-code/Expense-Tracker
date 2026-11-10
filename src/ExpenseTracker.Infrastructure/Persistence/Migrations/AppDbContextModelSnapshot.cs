@@ -179,9 +179,9 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FamilyId");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("FamilyId", "UserId")
                         .IsUnique();
 
                     b.ToTable("FamilyMembers");

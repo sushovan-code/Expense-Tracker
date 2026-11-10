@@ -2,7 +2,8 @@ using ExpenseTracker.Domain.Families;
 
 namespace ExpenseTracker.Application.Features.Families;
 
-public sealed record FamilyMembership(Guid FamilyId, FamilyRole Role);
+/// <summary>One of my families and my role in it.</summary>
+public sealed record FamilySummaryDto(Guid Id, string Name, FamilyRole Role);
 
 public sealed record FamilyMemberDto(Guid UserId, string DisplayName, string Email, FamilyRole Role, DateTimeOffset JoinedAt);
 

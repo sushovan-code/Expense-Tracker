@@ -12,6 +12,10 @@ namespace ExpenseTracker.Application.Features.Families;
 
 public interface IFamilyService
 {
+    /// <summary>Every family I belong to (for the family switcher).</summary>
+    Task<IReadOnlyList<FamilySummaryDto>> ListMineAsync(CancellationToken cancellationToken);
+
+    /// <summary>The active family (see <c>ICurrentFamily</c>).</summary>
     Task<Result<FamilyDto>> GetMineAsync(CancellationToken cancellationToken);
     Task<Result<FamilyDto>> CreateAsync(string name, CancellationToken cancellationToken);
     Task<Result<FamilyDto>> RenameAsync(string name, CancellationToken cancellationToken);
@@ -40,6 +44,9 @@ internal sealed partial class FamilyService(
     TimeProvider clock,
     ILogger<FamilyService> logger) : IFamilyService
 {
+    public Task<IReadOnlyList<FamilySummaryDto>> ListMineAsync(CancellationToken cancellationToken) =>
+        queries.ListForUserAsync(current.UserId, cancellationToken);
+
     public async Task<Result<FamilyDto>> GetMineAsync(CancellationToken cancellationToken)
     {
         if (current.FamilyId is not { } familyId) return FamilyErrors.NoFamily;
@@ -48,8 +55,7 @@ internal sealed partial class FamilyService(
 
     public async Task<Result<FamilyDto>> CreateAsync(string name, CancellationToken cancellationToken)
     {
-        if (current.FamilyId is not null) return FamilyErrors.AlreadyInFamily;
-
+        // Anyone may create any number of families and owns each of them.
         var created = Family.Create(name, clock.GetUtcNow());
         if (!created.IsSuccess) return created.Error;
         var family = created.Value;
@@ -84,6 +90,10 @@ internal sealed partial class FamilyService(
     {
         if (RequireManager() is { } denied) return denied;
         var familyId = current.FamilyId!.Value;
+
+        // Someone who already has an account joins with an invite link instead, so nobody is added without agreeing.
+        if (await accounts.FindByEmailAsync(command.Email.Trim(), cancellationToken) is not null)
+            return Error.Validation("email", "An account with this email already exists. Send them an invite link instead.");
 
         var added = await CreateAccountAsync(command.Email, command.DisplayName, command.Password, cancellationToken);
         if (!added.IsSuccess) return added.Error;
@@ -135,10 +145,10 @@ internal sealed partial class FamilyService(
 
     public async Task<Result<FamilyDto>> JoinAsync(string token, CancellationToken cancellationToken)
     {
-        if (current.FamilyId is not null) return FamilyErrors.AlreadyInFamily;
-
         var invite = await FindUsableInviteAsync(token, cancellationToken);
         if (invite is null) return FamilyErrors.InvalidInvite;
+        if (await families.IsMemberAsync(invite.FamilyId, current.UserId, cancellationToken)) return FamilyErrors.AlreadyInFamily;
+        if (await BreaksMembershipRuleAsync(current.UserId, invite.Role, cancellationToken)) return FamilyErrors.AlreadyMemberElsewhere;
 
         var joined = await JoinFamilyAsync(invite, current.UserId, cancellationToken);
         return joined.IsSuccess ? await LoadAsync(invite.FamilyId, cancellationToken) : joined.Error;
@@ -152,6 +162,9 @@ internal sealed partial class FamilyService(
         var member = await families.GetMemberAsync(familyId, userId, cancellationToken);
         if (member is null) return FamilyErrors.MemberNotFound(userId);
         if (await WouldLeaveNoOwnerAsync(member, role, cancellationToken)) return FamilyErrors.LastOwner;
+        // Demoting an owner makes them a Member or Viewer here, which they may be in only one family.
+        if (member.Role == FamilyRole.Owner && await BreaksMembershipRuleAsync(userId, role, cancellationToken))
+            return FamilyErrors.AlreadyMemberElsewhere;
 
         member.ChangeRole(role);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -186,6 +199,9 @@ internal sealed partial class FamilyService(
 
     private async Task<bool> WouldLeaveNoOwnerAsync(FamilyMember member, FamilyRole? newRole, CancellationToken cancellationToken) =>
         FamilyPolicy.WouldLeaveNoOwner(member.Role, newRole, await families.CountOwnersAsync(member.FamilyId, cancellationToken));
+
+    private async Task<bool> BreaksMembershipRuleAsync(Guid userId, FamilyRole role, CancellationToken cancellationToken) =>
+        !FamilyPolicy.AllowsMembership(role, await families.CountNonOwnerMembershipsAsync(userId, cancellationToken));
 
     private async Task<FamilyInvite?> FindUsableInviteAsync(string token, CancellationToken cancellationToken)
     {

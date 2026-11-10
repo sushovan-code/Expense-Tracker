@@ -62,11 +62,74 @@ public class FamilyServiceTests
     }
 
     [Fact]
-    public async Task Someone_already_in_a_family_cannot_create_another()
+    public async Task Someone_who_already_owns_a_family_can_create_another()
     {
-        var result = await _service.CreateAsync("Second", Ct);
+        GivenFamilyIsLoadable();
 
-        result.Error.ShouldBe(FamilyErrors.AlreadyInFamily);
+        var result = await _service.CreateAsync("Parents", Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        _families.Received(1).Add(Arg.Is<FamilyMember>(m => m.UserId == UserId && m.Role == FamilyRole.Owner));
+    }
+
+    [Fact]
+    public async Task Joining_as_a_member_is_refused_when_already_a_member_or_viewer_elsewhere()
+    {
+        var invite = FamilyInvite.Create(TestIds.Of(501), FamilyRole.Member, InviteTokens.Hash("secret"), TestIds.Of(601), new FixedTimeProvider().GetUtcNow());
+        _families.FindInviteByHashAsync(InviteTokens.Hash("secret"), Ct).Returns(invite);
+        _families.CountNonOwnerMembershipsAsync(UserId, Ct).Returns(1);
+
+        var result = await _service.JoinAsync("secret", Ct);
+
+        result.Error.ShouldBe(FamilyErrors.AlreadyMemberElsewhere);
+        _families.DidNotReceiveWithAnyArgs().Add(default(FamilyMember)!);
+    }
+
+    [Fact]
+    public async Task An_owner_of_other_families_can_join_another_one_as_a_member()
+    {
+        GivenFamilyIsLoadable();
+        var invite = FamilyInvite.Create(TestIds.Of(501), FamilyRole.Member, InviteTokens.Hash("secret"), TestIds.Of(601), new FixedTimeProvider().GetUtcNow());
+        _families.FindInviteByHashAsync(InviteTokens.Hash("secret"), Ct).Returns(invite);
+        _families.CountNonOwnerMembershipsAsync(UserId, Ct).Returns(0);
+
+        var result = await _service.JoinAsync("secret", Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        _families.Received(1).Add(Arg.Is<FamilyMember>(m => m.FamilyId == TestIds.Of(501) && m.Role == FamilyRole.Member));
+    }
+
+    [Fact]
+    public async Task Joining_a_family_you_are_already_in_is_refused()
+    {
+        var invite = FamilyInvite.Create(FamilyId, FamilyRole.Member, InviteTokens.Hash("secret"), TestIds.Of(601), new FixedTimeProvider().GetUtcNow());
+        _families.FindInviteByHashAsync(InviteTokens.Hash("secret"), Ct).Returns(invite);
+        _families.IsMemberAsync(FamilyId, UserId, Ct).Returns(true);
+
+        (await _service.JoinAsync("secret", Ct)).Error.ShouldBe(FamilyErrors.AlreadyInFamily);
+    }
+
+    [Fact]
+    public async Task Demoting_an_owner_who_is_already_a_member_elsewhere_is_refused()
+    {
+        var coOwner = FamilyMember.Create(FamilyId, TestIds.Of(7), FamilyRole.Owner, DateTimeOffset.UtcNow);
+        _families.GetMemberAsync(FamilyId, TestIds.Of(7), Ct).Returns(coOwner);
+        _families.CountOwnersAsync(FamilyId, Ct).Returns(2);
+        _families.CountNonOwnerMembershipsAsync(TestIds.Of(7), Ct).Returns(1);
+
+        var result = await _service.ChangeRoleAsync(TestIds.Of(7), FamilyRole.Member, Ct);
+
+        result.Error.ShouldBe(FamilyErrors.AlreadyMemberElsewhere);
+    }
+
+    [Fact]
+    public async Task Listing_my_families_comes_from_the_queries()
+    {
+        _queries.ListForUserAsync(UserId, Ct).Returns([new FamilySummaryDto(FamilyId, "Sharma family", FamilyRole.Owner)]);
+
+        var result = await _service.ListMineAsync(Ct);
+
+        result.Single().Name.ShouldBe("Sharma family");
     }
 
     [Theory]
@@ -106,6 +169,18 @@ public class FamilyServiceTests
         await _accounts.Received(1).CreateAsync(Arg.Any<NewUserAccount>(), "Password123",
             Arg.Is<IReadOnlyCollection<string>>(roles => roles.Single() == AppRoles.User), Ct);
         _families.Received(1).Add(Arg.Is<FamilyMember>(m => m.UserId == TestIds.Of(7) && m.Role == FamilyRole.Viewer));
+    }
+
+    [Fact]
+    public async Task Adding_someone_who_already_has_an_account_points_to_an_invite_link()
+    {
+        _accounts.FindByEmailAsync("wife@tests.local", Ct).Returns(new UserAccount(TestIds.Of(9), "wife@tests.local", "Wife", true, null, 0, DateTimeOffset.UtcNow, null));
+
+        var result = await _service.AddMemberAsync(new AddMemberCommand("wife@tests.local", "Wife", "Password123", FamilyRole.Member), Ct);
+
+        result.Error!.Field.ShouldBe("email");
+        result.Error.Detail.ShouldContain("invite link");
+        await _accounts.DidNotReceiveWithAnyArgs().CreateAsync(default!, default!, default!, Ct);
     }
 
     [Fact]

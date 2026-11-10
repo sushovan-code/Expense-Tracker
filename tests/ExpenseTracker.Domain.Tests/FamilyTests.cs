@@ -77,6 +77,17 @@ public class FamilyPolicyTests
         FamilyPolicy.CanChangeExpense(role, isOwn).ShouldBe(expected);
 
     [Theory]
+    [InlineData(FamilyRole.Owner, 0, true)]
+    [InlineData(FamilyRole.Owner, 1, true)]
+    [InlineData(FamilyRole.Owner, 5, true)]
+    [InlineData(FamilyRole.Member, 0, true)]
+    [InlineData(FamilyRole.Member, 1, false)]
+    [InlineData(FamilyRole.Viewer, 0, true)]
+    [InlineData(FamilyRole.Viewer, 1, false)]
+    public void A_person_owns_any_number_of_families_but_is_a_member_or_viewer_in_one(FamilyRole role, int nonOwnerMemberships, bool expected) =>
+        FamilyPolicy.AllowsMembership(role, nonOwnerMemberships).ShouldBe(expected);
+
+    [Theory]
     [InlineData(FamilyRole.Owner, FamilyRole.Member, 1, true)]
     [InlineData(FamilyRole.Owner, null, 1, true)]
     [InlineData(FamilyRole.Owner, FamilyRole.Member, 2, false)]

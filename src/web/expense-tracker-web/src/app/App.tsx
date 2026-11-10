@@ -1,6 +1,6 @@
 import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { AccountPage, LoginPage, LogoutPage, RequireAuth } from '@/features/auth'
+import { AccountPage, LoginPage, LogoutPage, RegisterPage, RequireAuth } from '@/features/auth'
 import { AcceptInvitePage } from '@/features/families'
 import { Permission, Role } from '@/shared/auth/permissions'
 import { Layout } from './layout/Layout'
@@ -22,6 +22,7 @@ export function App() {
     <Routes>
       <Route path="login" element={<LoginPage />} />
       <Route path="logout" element={<LogoutPage />} />
+      <Route path="register" element={<RegisterPage />} />
       <Route path="accept-invite" element={<AcceptInvitePage />} />
 
       <Route element={<RequireAuth />}>

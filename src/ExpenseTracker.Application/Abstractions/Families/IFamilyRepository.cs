@@ -8,6 +8,11 @@ public interface IFamilyRepository
     Task<Family?> GetFamilyAsync(Guid familyId, CancellationToken cancellationToken);
     Task<FamilyMember?> GetMemberAsync(Guid familyId, Guid userId, CancellationToken cancellationToken);
     Task<int> CountOwnersAsync(Guid familyId, CancellationToken cancellationToken);
+
+    /// <summary>How many families the user is a Member or Viewer in (owning a family does not count).</summary>
+    Task<int> CountNonOwnerMembershipsAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<bool> IsMemberAsync(Guid familyId, Guid userId, CancellationToken cancellationToken);
     Task<FamilyInvite?> GetInviteAsync(Guid familyId, Guid inviteId, CancellationToken cancellationToken);
     Task<FamilyInvite?> FindInviteByHashAsync(string tokenHash, CancellationToken cancellationToken);
     void Add(Family family);

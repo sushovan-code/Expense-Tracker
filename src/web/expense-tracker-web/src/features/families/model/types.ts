@@ -4,6 +4,13 @@ export const FAMILY_ROLES: FamilyRole[] = ['owner', 'member', 'viewer']
 
 export const FAMILY_ROLE_LABEL: Record<FamilyRole, string> = { owner: 'Owner', member: 'Member', viewer: 'Viewer' }
 
+/** One of my families and my role in it (for the family switcher). */
+export interface FamilySummary {
+  id: string
+  name: string
+  role: FamilyRole
+}
+
 export interface FamilyMember {
   userId: string
   displayName: string

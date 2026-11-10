@@ -1,10 +1,12 @@
 import { act, waitFor } from '@testing-library/react'
-import { ApiError } from '@/shared/api/httpClient'
 import { provide } from '@/shared/di/services'
 import { fakeFamiliesApi, sharma } from '@/test/fakeFamiliesApi'
 import { renderHookWithProviders } from '@/test/renderWithProviders'
 import { FamiliesApiToken } from '../api/familiesApi'
+import { switchActiveFamily } from '@/shared/family/activeFamily'
 import { inviteLink, useFamilyViewModel } from './useFamilyViewModel'
+
+vi.mock('@/shared/family/activeFamily', () => ({ switchActiveFamily: vi.fn(), getActiveFamilyId: () => null, FAMILY_HEADER: 'X-Family-Id' }))
 
 const render = (api = fakeFamiliesApi()) => ({
   api,
@@ -13,7 +15,7 @@ const render = (api = fakeFamiliesApi()) => ({
 
 describe('useFamilyViewModel', () => {
   it('treats a missing family as "no family yet", not as an error', async () => {
-    const { result } = render(fakeFamiliesApi({ getMine: vi.fn().mockRejectedValue(new ApiError('Create or join a family first.', 403)) }))
+    const { result } = render(fakeFamiliesApi({ listMine: vi.fn().mockResolvedValue([]) }))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
@@ -22,12 +24,24 @@ describe('useFamilyViewModel', () => {
   })
 
   it('creates a family', async () => {
-    const { result, api } = render(fakeFamiliesApi({ getMine: vi.fn().mockResolvedValue(null) }))
+    const { result, api } = render(fakeFamiliesApi({ listMine: vi.fn().mockResolvedValue([]) }))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     await act(() => result.current.createFamily('Sharma family'))
 
     expect(api.create).toHaveBeenCalledWith('Sharma family')
+    expect(switchActiveFamily).toHaveBeenCalledWith('fam-1', '/family')
+  })
+
+  it('lets someone who already has a family create another and switches to it', async () => {
+    const { result, api } = render()
+    await waitFor(() => expect(result.current.family).toBeTruthy())
+
+    act(() => result.current.newFamilyDialog.open())
+    await act(() => result.current.createFamily('My parents'))
+
+    expect(api.create).toHaveBeenCalledWith('My parents')
+    expect(switchActiveFamily).toHaveBeenCalled()
   })
 
   it('lets only owners manage the family', async () => {
