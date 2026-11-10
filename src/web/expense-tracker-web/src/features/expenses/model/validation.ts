@@ -7,6 +7,7 @@ export interface ExpenseDraft {
   date: string
   categoryId: string
   notes: string
+  isPrivate: boolean
 }
 
 export type ExpenseErrors = Partial<Record<keyof ExpenseInput, string>>
@@ -31,6 +32,7 @@ export const toExpenseInput = (draft: ExpenseDraft): ExpenseInput => ({
   date: draft.date,
   categoryId: draft.categoryId,
   notes: draft.notes.trim() || null,
+  isPrivate: draft.isPrivate,
 })
 
 export const hasErrors = (errors: object) => Object.keys(errors).length > 0

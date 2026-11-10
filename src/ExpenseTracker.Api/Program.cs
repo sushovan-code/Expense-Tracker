@@ -67,6 +67,11 @@ await using (var scope = app.Services.CreateAsyncScope())
     if (features.ShouldSeedIdentityOnStartup)
     {
         await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync(stopping);
+
+        if (scope.ServiceProvider.GetRequiredService<IOptions<IdentityStoreOptions>>().Value.Seed.ShouldSeedDemoFamilies)
+        {
+            await scope.ServiceProvider.GetRequiredService<DemoFamilySeeder>().SeedAsync(stopping);
+        }
     }
 }
 

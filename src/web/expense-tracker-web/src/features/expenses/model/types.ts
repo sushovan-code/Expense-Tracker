@@ -10,6 +10,8 @@ export interface Expense {
   categoryColor: string
   notes: string | null
   createdAt: string
+  isPrivate: boolean
+  createdByUserId: string
 }
 
 export interface ExpenseInput {
@@ -18,6 +20,8 @@ export interface ExpenseInput {
   date: IsoDate
   categoryId: string
   notes: string | null
+  /** Private expenses are visible only to the person who created them. */
+  isPrivate: boolean
 }
 
 export type ExpenseSortField = 'date' | 'amount' | 'description' | 'category' | 'createdat'
@@ -26,6 +30,8 @@ export interface ExpenseFilters {
   from?: IsoDate
   to?: IsoDate
   categoryId?: string
+  /** Only expenses created by this family member; omitted means everyone. */
+  memberId?: string
   search?: string
 }
 

@@ -1,7 +1,7 @@
 namespace ExpenseTracker.Application.Features.Families;
 
 /// <summary>The categories every new family starts with (they used to be global seed data).</summary>
-internal static class DefaultCategories
+public static class DefaultCategories
 {
     public static readonly IReadOnlyList<(string Name, string Color)> All =
     [

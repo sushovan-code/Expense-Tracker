@@ -9,6 +9,8 @@ export const QueryRoots = {
   expenses: 'expenses',
   categories: 'categories',
   budgets: 'budgets',
+  /** The signed-in user's family: members, roles and invites. */
+  family: 'family',
   /** The signed-in user's own account data (API keys). */
   account: 'account',
   /** User and role administration. */

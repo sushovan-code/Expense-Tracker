@@ -85,6 +85,15 @@ Every API endpoint requires authentication (except sign-in, health and, in Devel
 | `user@expensetracker.local` | `Password123` | User | Add, edit, delete and export expenses and categories |
 | `reader@expensetracker.local` | `Password123` | Reader | Read and export only |
 
+In Development the API also seeds two demo families, so you can see that families never see each other's data:
+
+| Family | Members (family role) |
+| --- | --- |
+| Sharma family | `user@` (Owner), `admin@` (Member), `reader@` (Viewer), all on `@expensetracker.local` |
+| Verma family | `verma.owner@` (Owner), `verma.member@` (Member), same domain and `Password123` |
+
+`superadmin@` has no family: it manages users app-wide but sees no expenses until it creates or joins one. Family roles are separate from the app roles above: the app role decides whether you may use expenses at all, the family role decides whose data you see and what you may do in it (Owner manages members, invites, categories and budgets; Member adds and edits their own expenses; Viewer reads). Mark an expense **Private** and only you see it. Owners add members or create a 48-hour, single-use invite link on the **Family** page.
+
 - **Browser:** sign in at `/login`; sign out from the avatar menu (`/logout`). Manage your password and API keys at `/account`, and users, roles and claims at `/admin` (Admin or above).
 - **Scripts:** create a personal API key on the account page (or `POST /api/v1/auth/api-keys`) and send it as `x-api-key`. Keys expire and can be limited to specific permissions.
 - **Scalar/OpenAPI:** call `POST /api/v1/auth/login`, then paste the `accessToken` into the Bearer auth.

@@ -35,6 +35,19 @@ export function ExpenseFilters({ filters, hasFilters }: { filters: ExpensesViewM
           ))}
         </select>
       </label>
+      {filters.members.length > 1 && (
+        <label className="filters__field">
+          <span>Member</span>
+          <select className="input" value={filters.memberId} onChange={(e) => filters.setMember(e.target.value)}>
+            <option value="">Everyone</option>
+            {filters.members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="filters__actions">
         <button type="button" className="button button--ghost" onClick={filters.showThisMonth}>
           This month

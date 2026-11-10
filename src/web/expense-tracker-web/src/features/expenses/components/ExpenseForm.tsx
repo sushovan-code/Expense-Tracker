@@ -6,6 +6,7 @@ import { logger } from '@/shared/telemetry'
 import { useToast } from '@/shared/toast/toast'
 import type { CategoryOption, Expense, ExpenseInput } from '../model/types'
 import { Field } from '@/shared/ui/Field'
+import { Checkbox } from '@/shared/ui/grid/Checkbox'
 
 interface ExpenseFormProps {
   expense?: Expense
@@ -20,13 +21,14 @@ export function ExpenseForm({ expense, categories, onSubmit, onCancel }: Expense
   const [date, setDate] = useState(expense?.date ?? today())
   const [categoryId, setCategoryId] = useState(expense?.categoryId ?? categories[0]?.id ?? '')
   const [notes, setNotes] = useState(expense?.notes ?? '')
+  const [isPrivate, setIsPrivate] = useState(expense?.isPrivate ?? false)
   const [errors, setErrors] = useState<ExpenseErrors>({})
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    const draft = { description, amount, date, categoryId, notes }
+    const draft = { description, amount, date, categoryId, notes, isPrivate }
     const clientErrors = validateExpense(draft)
     setErrors(clientErrors)
     if (hasErrors(clientErrors)) {
@@ -119,6 +121,10 @@ export function ExpenseForm({ expense, categories, onSubmit, onCancel }: Expense
         />
       </Field>
 
+      <label className="chip-toggle" htmlFor="expense-private">
+        <Checkbox id="expense-private" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
+        <span>Private: only I can see this expense</span>
+      </label>
 
       <div className="form-actions">
         <button type="button" className="button button--ghost" onClick={onCancel}>

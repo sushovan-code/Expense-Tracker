@@ -54,6 +54,7 @@ const toDraft = (e: Expense): ExpenseDraft => ({
   date: e.date,
   categoryId: e.categoryId,
   notes: e.notes ?? '',
+  isPrivate: e.isPrivate,
 })
 
 export function ExpensesGrid({
