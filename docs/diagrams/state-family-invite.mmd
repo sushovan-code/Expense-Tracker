@@ -1,0 +1,14 @@
+%% Lifecycle of a family invite. Claude rewrites this via /update-diagrams.
+stateDiagram-v2
+  [*] --> Open: Owner creates the invite
+  Open --> Accepted: someone joins with the link
+  Open --> Revoked: Owner revokes it
+  Open --> Expired: 48 hours pass
+  Accepted --> [*]
+  Revoked --> [*]
+  Expired --> [*]
+
+  note right of Open
+    Only the hash of the token is stored.
+    A link works once.
+  end note

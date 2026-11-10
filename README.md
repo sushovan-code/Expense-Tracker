@@ -5,7 +5,8 @@ A full-stack expense tracker built with React, TypeScript and Vite on the fronte
 ## Features
 
 - **Dashboard**: a month picker, totals with a comparison against the previous month, spending by category (donut chart), a 6-month trend (bar chart), **budget progress** and recent expenses. It updates live.
-- **Expenses grid**: server-side **paging, sorting and filtering** (date range, category, search). Grid state lives in the URL, so views are shareable and survive reloads.
+- **Families**: each family has its own expenses, categories and budgets, and people only see their own family's data. Roles are **Owner** (manages members, invites, categories and budgets), **Member** (adds and edits their own expenses) and **Viewer** (read only). Owners add members directly or share a **48-hour, single-use invite link**. Mark an expense **Private** and only you see it, even the Owner. Family roles are separate from the app-wide roles (see [Signing in & access control](#signing-in--access-control)).
+- **Expenses grid**: server-side **paging, sorting and filtering** (date range, category, member, search). Grid state lives in the URL, so views are shareable and survive reloads.
   - **Inline editing:** double-click a row or use the pencil; **Enter** saves and **Esc** cancels.
   - **Row selection** (it persists across pages) with **bulk delete**.
   - **CSV export** of the current filter and sort.
@@ -229,24 +230,34 @@ Every REST route is versioned under `/api/v1` (`Endpoints/ApiRoutes.cs`, ADR 000
 
 | Method | Route | Notes |
 | --- | --- | --- |
-| GET | `/api/v1/expenses` | **Paged.** Query: `from`, `to` (YYYY-MM-DD), `categoryId`, `search`, `page`, `pageSize` (≤ 100), `sortBy` (`date`, `amount`, `description`, `category`, `createdAt`), `sortDir`. Returns `items`, `page`, `pageSize`, `totalCount`, `totalPages` and `totalAmount` |
+| GET | `/api/v1/expenses` | **Paged.** Query: `from`, `to` (YYYY-MM-DD), `categoryId`, `memberId` (default: everyone), `search`, `page`, `pageSize` (≤ 100), `sortBy` (`date`, `amount`, `description`, `category`, `createdAt`), `sortDir`. Returns `items`, `page`, `pageSize`, `totalCount`, `totalPages` and `totalAmount` |
 | GET | `/api/v1/expenses/export` | CSV with the same filters and sort, up to 10,000 rows (formula-injection safe, UTF-8 BOM) |
-| GET | `/api/v1/expenses/summary` | Query: `from`, `to`. Returns totals by category and by month |
+| GET | `/api/v1/expenses/summary` | Query: `from`, `to`, `memberId`. Returns totals by category and by month |
 | POST | `/api/v1/expenses/bulk-delete` | Body: `{ "ids": [..] }` (max 500). Returns `deleted` and `deletedIds` |
 | GET/PUT/DELETE | `/api/v1/expenses/{id}` | |
-| POST | `/api/v1/expenses` | |
+| POST | `/api/v1/expenses` | Body includes the optional `isPrivate` (only the creator sees a private expense) |
 | GET | `/api/v1/categories` | **Paged.** Query: `search`, `page`, `pageSize`, `sortBy` (`name`, `expenses`, `budget`), `sortDir` |
 | GET | `/api/v1/categories/lookup` | Every category (`id`, `name`, `color`) for dropdowns |
 | POST | `/api/v1/categories` | Body includes the optional `monthlyBudget` |
 | PUT/DELETE | `/api/v1/categories/{id}` | DELETE returns 409 if the category has expenses |
 | GET | `/api/v1/budgets` | Query: `year`, `month` (default: current month). Budget status per category |
+| GET | `/api/v1/families/mine` | My family with its members and (for owners) open invites. `403` when I have no family yet |
+| POST | `/api/v1/families` | Create my family; I become its Owner and it gets the default categories |
+| PUT | `/api/v1/families/mine` | Rename the family (Owner) |
+| POST | `/api/v1/families/members` | Create an account and add it to the family (Owner) |
+| PUT/DELETE | `/api/v1/families/members/{userId}[/role]` | Change a role or remove a member (Owner). The last Owner can't be demoted or removed |
+| POST | `/api/v1/families/leave` | Leave my family |
+| POST | `/api/v1/families/invites` | Create an invite token, shown once (Owner). Valid for 48 hours and one use |
+| DELETE | `/api/v1/families/invites/{id}` | Revoke an invite (Owner) |
+| POST | `/api/v1/families/invites/join` | A signed-in user without a family joins with an invite token |
+| POST | `/api/v1/families/invites/accept` | **Anonymous, rate-limited.** Creates the account from an invite and joins the family |
 | WS | `/hubs/expenses` | SignalR hub (see below) |
 
-Unknown sort fields, invalid ranges and out-of-range page sizes return `400` validation problems. A page past the end is clamped to the last page.
+Unknown sort fields, invalid ranges and out-of-range page sizes return `400` validation problems. A page past the end is clamped to the last page. Another family's ids return `404`, never `403`, so their existence isn't revealed. A signed-in user without a family sees empty lists and gets `403` when adding data.
 
 ### Realtime (SignalR)
 
-The hub is push-only: all writes go through the REST API, which keeps validation, logging and error handling in one place. After a successful change, the API broadcasts one of these events:
+The hub is push-only: all writes go through the REST API, which keeps validation, logging and error handling in one place. After a successful change, the API broadcasts one of these events. Each connection joins its family's group, so events reach only the people in the same family (a person without a family gets none):
 
 | Event | Payload | Sent when |
 | --- | --- | --- |
@@ -265,10 +276,12 @@ There are sample requests in `src/ExpenseTracker.Api/ExpenseTracker.Api.http`.
 
 | Diagram | Shows |
 | --- | --- |
-| [Context](docs/diagrams/context.svg) | Who uses the system (family members, API-key scripts) and what it talks to (the Aspire dashboard in development). |
-| [Containers](docs/diagrams/containers.svg) | The SPA, the API with its SignalR hub and Identity, the in-memory cache and the SQLite database. |
+| [Context](docs/diagrams/context.svg) | Who uses the system (family members, invited people, API-key scripts) and what it talks to (the Aspire dashboard in development). |
+| [Containers](docs/diagrams/containers.svg) | The SPA, the API with its SignalR hub, Identity and family layer, the in-memory cache and the SQLite database. |
 | [Sign-in](docs/diagrams/sequence-login.svg) | Login, the in-memory access token, and the rotating refresh cookie. |
-| [Add an expense](docs/diagrams/sequence-add-expense.svg) | Validation, saving, the budget check, and live updates and alerts over SignalR. |
+| [Add an expense](docs/diagrams/sequence-add-expense.svg) | The family lookup and role check, validation, saving, the budget check, and live updates and alerts to the family over SignalR. |
+| [Invite and join](docs/diagrams/sequence-invite.svg) | An Owner creates an invite link, and the invited person creates an account and joins the family. |
+| [Family invite lifecycle](docs/diagrams/state-family-invite.svg) | An invite is open, then accepted, revoked or expired. |
 | [Azure deployment](docs/diagrams/deployment-azure.png) | **Placeholder** until the Stage 2 Terraform exists; shows the intended shape only. |
 
 Sources are in [docs/diagrams/](docs/diagrams/README.md); re-render them with `pwsh -File scripts/render-diagrams.ps1`.
@@ -279,7 +292,8 @@ See **[docs/architecture.md](docs/architecture.md)** for the full picture. In sh
   - Implementations are `internal` behind interfaces.
   - Reads and writes are split (CQRS-style).
   - Expected errors are values mapped to RFC 9457 problem details.
-  - Architecture tests enforce the dependency rule.
+  - **Family access is a separate layer** on top of the app roles: a per-request family lookup, EF Core query filters and `FamilyPolicy` (ADR 0007).
+  - Architecture tests enforce the dependency rule and that every family-owned entity has its family filter.
 - **Frontend: MVVM-style React.**
   - Each screen is a **View** (page + presentational components) bound to a **ViewModel hook** (`useExpensesViewModel`) that holds state and commands.
   - **Models** are typed API services and validation.
@@ -298,7 +312,7 @@ cd src\web\expense-tracker-web
 npm test          # or: npm run check  (type-check + lint + tests)
 ```
 
-The API integration tests host the real API in memory against a **throwaway SQLite file** per test class (`%TEMP%/expense-tracker-tests-<guid>.db`), which is created by migrations and deleted at the end. No Docker or database install is needed, so CI runs them on Linux. Your development database is never touched.
+The integration tests include two-family isolation checks (one family gets `404` or empty results for the other's expenses and categories, private expenses stay private, roles are enforced). The API integration tests host the real API in memory against a **throwaway SQLite file** per test class (`%TEMP%/expense-tracker-tests-<guid>.db`), which is created by migrations and deleted at the end. No Docker or database install is needed, so CI runs them on Linux. Your development database is never touched.
 
 ## Repository layout
 

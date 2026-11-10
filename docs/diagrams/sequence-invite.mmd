@@ -1,0 +1,27 @@
+%% Invite someone to a family and let them join. Claude rewrites this via /update-diagrams.
+sequenceDiagram
+  autonumber
+  actor O as Family Owner
+  participant W as Web app
+  participant A as API (FamilyService)
+  participant D as SQLite
+  actor I as Invited person
+
+  O->>W: Invite link, pick a role
+  W->>A: POST /api/v1/families/invites
+  Note over A: only an Owner may create invites
+  A->>D: store the invite with the hash of its token, expires in 48 hours
+  A-->>W: the token, shown once
+  O->>I: shares the link yourself, for example in a message
+  I->>W: open /accept-invite with the token
+  W->>A: POST /api/v1/families/invites/accept (anonymous, rate limited)
+  A->>D: find the invite by the hash of the token
+  alt expired, revoked or already used
+    A-->>W: 409 Conflict
+  else valid
+    A->>D: create the account with the default User app role
+    A->>D: add the family member with the invited role
+    A->>D: mark the invite as used
+    A-->>W: 204 No Content
+    Note over I,W: the person signs in through the normal login
+  end

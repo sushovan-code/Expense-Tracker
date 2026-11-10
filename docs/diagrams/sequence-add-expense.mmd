@@ -6,18 +6,23 @@ sequenceDiagram
   participant A as API (ExpenseService)
   participant D as SQLite
   participant H as SignalR hub
-  participant O as Other open tabs
+  participant O as Same family, other tabs
 
   U->>W: save the expense form
   W->>A: POST /api/v1/expenses
-  Note over A: check permission expense.add,<br/>validate contract and domain rules
-  A->>D: insert the expense (GUID v7 id)
-  A->>D: sum this month's spending in the category
-  A->>H: expenses changed
-  H-->>O: change notice, so cached queries refresh
-  opt the category just went over budget
-    A->>H: budget exceeded
-    H-->>W: alert toast
-    H-->>O: alert toast
+  Note over A: check permission expense.add, then look up<br/>the caller's family and family role
+  alt no family, or a Viewer
+    A-->>W: 403 Forbidden
+  else Owner or Member
+    Note over A: validate contract and domain rules
+    A->>D: insert the expense (GUID v7 id, family, creator, private flag)
+    A->>D: sum this month's spending in the category (this family only)
+    A->>H: expenses changed
+    H-->>O: change notice to the family group, so cached queries refresh
+    opt the category just went over budget
+      A->>H: budget exceeded
+      H-->>W: alert toast
+      H-->>O: alert toast
+    end
+    A-->>W: 201 Created
   end
-  A-->>W: 201 Created

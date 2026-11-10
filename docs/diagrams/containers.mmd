@@ -7,15 +7,18 @@ flowchart LR
   user([Family member])
   web[Web app<br/><small>React + TypeScript SPA, Vite</small>]:::ours
   api[API<br/><small>.NET 10 Minimal API, SignalR hub,<br/>ASP.NET Core Identity + JWT</small>]:::ours
+  family[Family layer in the API<br/><small>reads the caller's family after auth,<br/>query filters, family role rules</small>]:::ours
   cache[(HybridCache<br/><small>in-memory, user access snapshots</small>)]:::ours
-  db[(SQLite file<br/><small>EF Core: expenses, categories,<br/>users, roles, sessions, API keys</small>)]:::ours
+  db[(SQLite file<br/><small>EF Core: expenses, categories, families,<br/>members, invites, users, roles, sessions, API keys</small>)]:::ours
   dashboard[Aspire dashboard<br/><small>development only</small>]:::ext
 
   user --> web
   web -->|HTTPS, JSON, bearer token| api
-  api -. SignalR: changes, budget alerts .-> web
+  api -. SignalR: family group only .-> web
   api --> cache
-  api -->|EF Core| db
+  api --> family
+  family -->|EF Core, scoped to one family| db
+  api -->|EF Core: identity| db
   api -. OTLP .-> dashboard
   web -. OTLP over HTTP .-> dashboard
 
