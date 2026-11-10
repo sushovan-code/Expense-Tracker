@@ -18,5 +18,9 @@ public sealed class IdentitySeedOptions
     [ConfigurationKeyName("DemoUsers")]
     public bool ShouldSeedDemoUsers { get; init; }
 
+    /// <summary>Development only: also create two demo families (needs the demo users).</summary>
+    [ConfigurationKeyName("DemoFamilies")]
+    public bool ShouldSeedDemoFamilies { get; init; }
+
     public string? DemoPassword { get; init; }
 }

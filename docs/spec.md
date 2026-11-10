@@ -5,7 +5,7 @@ A family records what it spends, sees where the money goes and stays within mont
 
 ## Users and access
 - **App roles** (existing RBAC): SuperAdmin > Admin > User > Reader. Each holds `resource.action` permissions. These decide what someone may do in the app at all. See the security section of `architecture.md`.
-- **Family roles** (planned, `roadmap.md` slice 2): Owner, Member or Viewer within one family. These decide whose data you see and what you may do inside your family. A user belongs to at most one family.
+- **Family roles**: Owner, Member or Viewer within one family. These decide whose data you see and what you may do inside your family. A user belongs to at most one family.
 - Sign-in uses email and password with a short-lived JWT access token and a rotating refresh cookie, or a personal API key.
 
 ## What it does today
@@ -18,6 +18,7 @@ A family records what it spends, sees where the money goes and stays within mont
   - a grid with server-side paging, sorting and filtering (date range, category, search)
   - inline editing, bulk delete and CSV export
   - delete with confirmation, then undo
+- **Families**: a family has its own expenses, categories and budgets. An Owner adds members or shares a 48-hour, single-use invite link; an expense can be marked private (only its creator sees it); lists, summaries and exports can be filtered by member. New families start with default categories.
 - **Categories**: name, colour and an optional monthly budget. A category that still has expenses can't be deleted.
 - **Budgets**: each category is shown as on track, close to its limit (80% or more) or over budget. An alert goes out the moment a category goes over.
 - **Realtime**: SignalR pushes changes and budget alerts to every open session.
@@ -33,7 +34,6 @@ A family records what it spends, sees where the money goes and stays within mont
 
 ## Planned
 See `roadmap.md`:
-- family groups with invites and private expenses
 - budget alerts at 75%, 90% and 100%
 - income and savings goals
 - recurring expenses

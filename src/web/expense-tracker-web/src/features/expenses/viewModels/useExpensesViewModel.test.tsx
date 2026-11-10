@@ -1,14 +1,16 @@
 import { act, waitFor } from '@testing-library/react'
 import { CategoriesApiToken, type CategoriesApi } from '@/features/categories'
 import { provide } from '@/shared/di/services'
+import { fakeFamiliesApi } from '@/test/fakeFamiliesApi'
 import { renderHookWithProviders } from '@/test/renderWithProviders'
+import { FamiliesApiToken } from '@/features/families'
 import { ExpensesApiToken, type ExpensesApi } from '../api/expensesApi'
 import type { Expense } from '../model/types'
 import { useExpensesViewModel } from './useExpensesViewModel'
 
 const lunch: Expense = {
   id: 'exp-7', description: 'Lunch', amount: 320, date: '2026-10-05', categoryId: 'cat-food',
-  categoryName: 'Food', categoryColor: '#f97316', notes: null, createdAt: '2026-10-05T10:00:00Z',
+  categoryName: 'Food', categoryColor: '#f97316', notes: null, createdAt: '2026-10-05T10:00:00Z', isPrivate: false, createdByUserId: 'user-1',
 }
 
 function fakeExpensesApi(): ExpensesApi {
@@ -35,7 +37,7 @@ function renderViewModel(route = '/expenses') {
   const expenses = fakeExpensesApi()
   const view = renderHookWithProviders(() => useExpensesViewModel(), {
     route,
-    services: [provide(ExpensesApiToken, expenses), provide(CategoriesApiToken, fakeCategoriesApi())],
+    services: [provide(ExpensesApiToken, expenses), provide(CategoriesApiToken, fakeCategoriesApi()), provide(FamiliesApiToken, fakeFamiliesApi())],
   })
   return { ...view, expenses }
 }
@@ -51,12 +53,22 @@ describe('useExpensesViewModel', () => {
     })
   })
 
+  it('filters by family member and offers every member of the family', async () => {
+    const { result, expenses } = renderViewModel('/expenses?member=user-2')
+
+    await waitFor(() => expect(result.current.grid.data).toBeDefined())
+    await waitFor(() => expect(result.current.filters.members).toHaveLength(2))
+
+    expect(expenses.list).toHaveBeenCalledWith(expect.objectContaining({ memberId: 'user-2' }))
+    expect(result.current.summary.hasFilters).toBe(true)
+  })
+
   it('creates an expense and closes the dialog', async () => {
     const { result, expenses } = renderViewModel()
     await waitFor(() => expect(result.current.createDialog.canOpen).toBe(true))
 
     act(() => result.current.createDialog.open())
-    await act(() => result.current.createDialog.submit({ description: 'Coffee', amount: 120, date: '2026-10-05', categoryId: 'cat-food', notes: null }))
+    await act(() => result.current.createDialog.submit({ description: 'Coffee', amount: 120, date: '2026-10-05', categoryId: 'cat-food', notes: null, isPrivate: false }))
 
     expect(expenses.create).toHaveBeenCalledOnce()
     expect(result.current.createDialog.isOpen).toBe(false)

@@ -102,5 +102,6 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
         services.AddScoped<IApiKeyStore, ApiKeyStore>();
         services.AddScoped<IdentitySeeder>();
+        services.AddScoped<DemoFamilySeeder>();
     }
 }

@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AccountPage, LoginPage, LogoutPage, RequireAuth } from '@/features/auth'
+import { AcceptInvitePage } from '@/features/families'
 import { Permission, Role } from '@/shared/auth/permissions'
 import { Layout } from './layout/Layout'
 
@@ -8,6 +9,7 @@ import { Layout } from './layout/Layout'
 const DashboardPage = lazy(() => import('@/features/dashboard').then((m) => ({ default: m.DashboardPage })))
 const ExpensesPage = lazy(() => import('@/features/expenses').then((m) => ({ default: m.ExpensesPage })))
 const CategoriesPage = lazy(() => import('@/features/categories').then((m) => ({ default: m.CategoriesPage })))
+const FamilyPage = lazy(() => import('@/features/families').then((m) => ({ default: m.FamilyPage })))
 const AdminPage = lazy(() => import('@/features/admin').then((m) => ({ default: m.AdminPage })))
 
 /**
@@ -20,12 +22,14 @@ export function App() {
     <Routes>
       <Route path="login" element={<LoginPage />} />
       <Route path="logout" element={<LogoutPage />} />
+      <Route path="accept-invite" element={<AcceptInvitePage />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route index element={<RequireAuth permission={Permission.ExpenseView}><DashboardPage /></RequireAuth>} />
           <Route path="expenses" element={<RequireAuth permission={Permission.ExpenseView}><ExpensesPage /></RequireAuth>} />
           <Route path="categories" element={<RequireAuth permission={Permission.CategoryView}><CategoriesPage /></RequireAuth>} />
+          <Route path="family" element={<FamilyPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="admin" element={<RequireAuth minRole={Role.Admin}><AdminPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -17,6 +17,7 @@ const NAV: { to: string; label: string; end: boolean; visible: (access: Access) 
   { to: '/', label: 'Dashboard', end: true, visible: (a) => a.can(Permission.ExpenseView) },
   { to: '/expenses', label: 'Expenses', end: false, visible: (a) => a.can(Permission.ExpenseView) },
   { to: '/categories', label: 'Categories', end: false, visible: (a) => a.can(Permission.CategoryView) },
+  { to: '/family', label: 'Family', end: false, visible: () => true },
   {
     to: '/admin',
     label: 'Admin',

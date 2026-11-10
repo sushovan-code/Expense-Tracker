@@ -1,6 +1,6 @@
 import { toExpenseInput, validateExpense, type ExpenseDraft } from './validation'
 
-const valid: ExpenseDraft = { description: 'Groceries', amount: '250.50', date: '2026-10-05', categoryId: 'cat-food', notes: '' }
+const valid: ExpenseDraft = { description: 'Groceries', amount: '250.50', date: '2026-10-05', categoryId: 'cat-food', notes: '', isPrivate: false }
 
 describe('validateExpense', () => {
   it('accepts a complete draft', () => {
@@ -29,6 +29,7 @@ describe('toExpenseInput', () => {
       date: '2026-10-05',
       categoryId: 'cat-food',
       notes: null,
+      isPrivate: false,
     })
   })
 })

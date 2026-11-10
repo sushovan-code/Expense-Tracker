@@ -3,6 +3,7 @@ import { AccountApiToken, createAccountApi } from '@/features/auth'
 import { BudgetsApiToken, createBudgetsApi } from '@/features/budgets'
 import { CategoriesApiToken, createCategoriesApi } from '@/features/categories'
 import { createExpensesApi, ExpensesApiToken } from '@/features/expenses'
+import { createFamiliesApi, FamiliesApiToken } from '@/features/families'
 import { createHttpClient, HttpClientToken } from '@/shared/api/httpClient'
 import { createAuthSession, type AuthSession } from '@/shared/auth/session'
 import { AuthSessionToken } from '@/shared/auth/useSession'
@@ -31,5 +32,6 @@ export function createAppServices(): ServiceRegistration[] {
     provide(BudgetsApiToken, createBudgetsApi(http)),
     provide(AccountApiToken, createAccountApi(http)),
     provide(AdminApiToken, createAdminApi(http)),
+    provide(FamiliesApiToken, createFamiliesApi(http)),
   ]
 }

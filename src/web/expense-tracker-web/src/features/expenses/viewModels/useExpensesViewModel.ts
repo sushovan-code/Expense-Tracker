@@ -1,6 +1,7 @@
 import type { RowSelectionState, Updater } from '@tanstack/react-table'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useCategoryLookup } from '@/features/categories'
+import { useFamilyMembers } from '@/features/families'
 import { Permission } from '@/shared/auth/permissions'
 import { useAccess } from '@/shared/auth/useSession'
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue'
@@ -15,7 +16,7 @@ import { useExpenseMutations, useExpensesPage } from '../api/queries'
 import type { Expense, ExpenseInput, ExpenseQuery, ExpenseSortField } from '../model/types'
 
 /** Grid state kept in the URL (?from=&to=&category=&q=&page=&size=&sort=&dir=). */
-const URL_DEFAULTS = { from: '', to: '', category: '', q: '', page: '1', size: '20', sort: 'date', dir: 'desc' }
+const URL_DEFAULTS = { from: '', to: '', category: '', member: '', q: '', page: '1', size: '20', sort: 'date', dir: 'desc' }
 
 /** Columns sort ascending first, except date/amount (newest/largest first is the natural order). */
 const DEFAULT_DIR: Record<ExpenseSortField, SortDirection> = {
@@ -32,6 +33,7 @@ const toInput = (e: Expense): ExpenseInput => ({
   date: e.date,
   categoryId: e.categoryId,
   notes: e.notes,
+  isPrivate: e.isPrivate,
 })
 
 /**
@@ -63,16 +65,18 @@ export function useExpensesViewModel() {
       from: url.from || undefined,
       to: url.to || undefined,
       categoryId: url.category || undefined,
+      memberId: url.member || undefined,
       search: url.q.trim() || undefined,
     }),
-    [url.from, url.to, url.category, url.q],
+    [url.from, url.to, url.category, url.member, url.q],
   )
-  const hasFilters = Boolean(filters.from || filters.to || filters.categoryId || filters.search)
+  const hasFilters = Boolean(filters.from || filters.to || filters.categoryId || filters.memberId || filters.search)
   const sortBy = url.sort as ExpenseSortField
   const sortDir = url.dir as SortDirection
   const query: ExpenseQuery = { ...filters, page: Number(url.page), pageSize: Number(url.size), sortBy, sortDir }
 
   const categories = useCategoryLookup()
+  const members = useFamilyMembers()
   const expenses = useExpensesPage(query)
   const mutations = useExpenseMutations()
   useErrorToast(categories.error ?? undefined, "Couldn't load categories")
@@ -97,6 +101,7 @@ export function useExpensesViewModel() {
       'filter.from': filters.from,
       'filter.to': filters.to,
       'filter.category_id': filters.categoryId,
+      'filter.member_id': filters.memberId,
       'filter.has_search': Boolean(filters.search),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -231,16 +236,19 @@ export function useExpensesViewModel() {
       to: url.to,
       categoryId: url.category,
       categories: categories.data ?? [],
+      memberId: url.member,
+      members,
+      setMember: (member: string) => setUrl({ member, page: '1' }),
       setFrom: (from: string) => setUrl({ from, page: '1' }),
       setTo: (to: string) => setUrl({ to, page: '1' }),
       setCategory: (category: string) => setUrl({ category, page: '1' }),
       showThisMonth: () => {
         setSearchText('')
-        setUrl({ ...monthRange(currentMonth()), category: '', q: '', page: '1' })
+        setUrl({ ...monthRange(currentMonth()), category: '', member: '', q: '', page: '1' })
       },
       clear: () => {
         setSearchText('')
-        setUrl({ from: '', to: '', category: '', q: '', page: '1' })
+        setUrl({ from: '', to: '', category: '', member: '', q: '', page: '1' })
       },
     },
     grid: {
