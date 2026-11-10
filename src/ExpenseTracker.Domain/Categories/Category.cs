@@ -18,6 +18,8 @@ public sealed partial class Category : Entity
 
     private Category() { } // EF Core
 
+    public Guid FamilyId { get; private set; }
+
     public string Name { get; private set; } = "";
 
     /// <summary>Hex color, lower case (e.g. <c>#4f46e5</c>).</summary>
@@ -28,9 +30,9 @@ public sealed partial class Category : Entity
 
     public IReadOnlyCollection<Expense> Expenses => _expenses;
 
-    public static Result<Category> Create(string name, string color, decimal? monthlyBudget)
+    public static Result<Category> Create(string name, string color, decimal? monthlyBudget, Guid familyId)
     {
-        var category = new Category();
+        var category = new Category { FamilyId = familyId };
         var applied = category.Apply(name, color, monthlyBudget);
         return applied.IsSuccess ? category : applied.Error;
     }

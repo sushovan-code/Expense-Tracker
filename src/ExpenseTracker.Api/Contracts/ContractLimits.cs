@@ -10,6 +10,9 @@ internal static class ContractLimits
     public const int EmailMaxLength = 256;
     public const int DisplayNameMaxLength = 100;
 
+    /// <summary>Invite tokens are 43 characters; this leaves room without allowing huge inputs.</summary>
+    public const int InviteTokenMaxLength = 100;
+
     public const int ClaimTypeMaxLength = 256;
     public const int ClaimValueMaxLength = 1024;
 

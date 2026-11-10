@@ -58,7 +58,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5010. The Vite dev server proxies `/api` requests to the API on port 7010. In Development, the API applies EF Core migrations on startup, which creates the SQLite database at `src/ExpenseTracker.Api/App_Data/expense-tracker.db` and seeds the default categories. To start again from an empty database, stop the API and delete the `App_Data` folder.
+Then open http://localhost:5010. The Vite dev server proxies `/api` requests to the API on port 7010. In Development, the API applies EF Core migrations on startup, which creates the SQLite database at `src/ExpenseTracker.Api/App_Data/expense-tracker.db`. Each new family gets the default categories when it is created. To start again from an empty database, stop the API and delete the `App_Data` folder.
 
 #### Open it on your phone (same Wi-Fi)
 

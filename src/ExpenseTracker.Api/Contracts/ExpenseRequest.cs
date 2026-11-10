@@ -18,7 +18,9 @@ public sealed record ExpenseRequest(
     [property: Required, Description("Id of an existing category.")]
     Guid CategoryId,
     [property: StringLength(Expense.NotesMaxLength)]
-    string? Notes)
+    string? Notes,
+    [property: Description("Private expenses are visible only to the person who created them.")]
+    bool IsPrivate = false)
 {
-    public ExpenseCommand ToCommand() => new(Description, Amount, Date, CategoryId, Notes);
+    public ExpenseCommand ToCommand() => new(Description, Amount, Date, CategoryId, Notes, IsPrivate);
 }

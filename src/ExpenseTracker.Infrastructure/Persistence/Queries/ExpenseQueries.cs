@@ -11,7 +11,7 @@ internal sealed class ExpenseQueries(AppDbContext dbContext) : IExpenseQueries
 {
     /// <summary>Projection translated to SQL, so only the needed columns are read.</summary>
     private static readonly Expression<Func<Expense, ExpenseDto>> ToDto = e => new ExpenseDto(
-        e.Id, e.Description, e.Amount, e.Date, e.CategoryId, e.Category!.Name, e.Category.Color, e.Notes, e.CreatedAt);
+        e.Id, e.Description, e.Amount, e.Date, e.CategoryId, e.Category!.Name, e.Category.Color, e.Notes, e.CreatedAt, e.IsPrivate, e.CreatedByUserId);
 
     public async Task<ExpensePage> ListAsync(ExpenseFilter filter, PageRequest request, SortSpec sort, CancellationToken cancellationToken)
     {
@@ -36,9 +36,9 @@ internal sealed class ExpenseQueries(AppDbContext dbContext) : IExpenseQueries
     public Task<ExpenseDto?> GetAsync(Guid id, CancellationToken cancellationToken) =>
         dbContext.Expenses.AsNoTracking().Where(e => e.Id == id).Select(ToDto).FirstOrDefaultAsync(cancellationToken);
 
-    public async Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
+    public async Task<ExpenseSummary> SummarizeAsync(DateOnly? from, DateOnly? to, Guid? memberId, CancellationToken cancellationToken)
     {
-        var expenses = Filter(new ExpenseFilter(from, to, null, null));
+        var expenses = Filter(new ExpenseFilter(from, to, null, null, memberId));
 
         var byCategory = await expenses
             .GroupBy(e => new { e.CategoryId, e.Category!.Name, e.Category.Color })
@@ -66,6 +66,7 @@ internal sealed class ExpenseQueries(AppDbContext dbContext) : IExpenseQueries
         var query = dbContext.Expenses.AsNoTracking();
         if (f.From is not null) query = query.Where(e => e.Date >= f.From);
         if (f.To is not null) query = query.Where(e => e.Date <= f.To);
+        if (f.MemberId is not null) query = query.Where(e => e.CreatedByUserId == f.MemberId);
         if (f.CategoryId is not null) query = query.Where(e => e.CategoryId == f.CategoryId);
         if (!string.IsNullOrWhiteSpace(f.Search))
         {

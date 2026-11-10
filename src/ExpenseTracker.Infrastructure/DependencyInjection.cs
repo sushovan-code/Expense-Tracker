@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Abstractions.Identity;
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Application.Abstractions.Queries;
@@ -39,6 +40,11 @@ public static class DependencyInjection
 
         var sqliteConnectionString = SqliteConnectionStrings.ResolveDataSource(connectionString, contentRootPath);
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(sqliteConnectionString));
+
+        services.AddScoped<FamilyContext>();
+        services.AddScoped<ICurrentFamily>(sp => sp.GetRequiredService<FamilyContext>());
+        services.AddScoped<IFamilyRepository, FamilyRepository>();
+        services.AddScoped<IFamilyQueries, FamilyQueries>();
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IExpenseRepository, ExpenseRepository>();

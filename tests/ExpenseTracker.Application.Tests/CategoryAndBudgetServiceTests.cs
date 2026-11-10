@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Application.Abstractions.Queries;
 using ExpenseTracker.Application.Abstractions.Realtime;
@@ -7,6 +8,7 @@ using ExpenseTracker.Application.Features.Categories;
 using ExpenseTracker.Domain.Budgets;
 using ExpenseTracker.Domain.Categories;
 using ExpenseTracker.Domain.Common;
+using ExpenseTracker.Domain.Families;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
@@ -20,9 +22,26 @@ public class CategoryServiceTests
     private readonly CategoryService _service;
     private static readonly CancellationToken Ct = CancellationToken.None;
 
-    public CategoryServiceTests() =>
-        _service = new CategoryService(_categories, _unitOfWork, Substitute.For<ICategoryQueries>(), _notifier,
+    private readonly ICurrentFamily _family = Substitute.For<ICurrentFamily>();
+
+    public CategoryServiceTests()
+    {
+        _family.FamilyId.Returns(TestIds.Of(500));
+        _family.Role.Returns(FamilyRole.Owner);
+        _service = new CategoryService(_categories, _unitOfWork, Substitute.For<ICategoryQueries>(), _notifier, _family,
             NullLogger<CategoryService>.Instance);
+    }
+
+    [Fact]
+    public async Task Only_an_owner_can_create_categories()
+    {
+        _family.Role.Returns(FamilyRole.Member);
+
+        var result = await _service.CreateAsync(new CategoryCommand("Pets", "#f97316", null), Ct);
+
+        result.Error.ShouldBe(FamilyErrors.NotAllowed);
+        _categories.DidNotReceiveWithAnyArgs().Add(default!);
+    }
 
     [Fact]
     public async Task Create_rejects_a_duplicate_name()
@@ -38,7 +57,7 @@ public class CategoryServiceTests
     [Fact]
     public async Task Delete_is_a_conflict_while_expenses_use_the_category()
     {
-        var food = Category.Create("Food", "#f97316", null).Value!;
+        var food = Category.Create("Food", "#f97316", null, TestIds.Of(500)).Value!;
         _categories.GetByIdAsync(TestIds.Of(1), Ct).Returns(food);
         _categories.CountExpensesAsync(TestIds.Of(1), Ct).Returns(3);
 
@@ -51,7 +70,7 @@ public class CategoryServiceTests
     [Fact]
     public async Task Delete_removes_an_unused_category_and_notifies()
     {
-        var food = Category.Create("Food", "#f97316", null).Value!;
+        var food = Category.Create("Food", "#f97316", null, TestIds.Of(500)).Value!;
         _categories.GetByIdAsync(TestIds.Of(1), Ct).Returns(food);
 
         var result = await _service.DeleteAsync(TestIds.Of(1), Ct);

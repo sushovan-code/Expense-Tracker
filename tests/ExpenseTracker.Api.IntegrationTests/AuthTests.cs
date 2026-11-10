@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace ExpenseTracker.Api.IntegrationTests;
 
 /// <summary>Authentication, sessions, API keys and RBAC, end to end through HTTP.</summary>
-public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
+public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -20,7 +20,11 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
     private sealed record ApiKey(Guid Id, string Prefix, List<string> Scopes);
     private sealed record CreatedApiKey(ApiKey ApiKey, string Key);
 
-    private static object NewExpense => new { description = "auth-test", amount = 10m, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId };
+    private object NewExpense => new { description = "auth-test", amount = 10m, date = "2026-10-05", categoryId = factory.FamilyAFoodCategoryId };
+
+    public async ValueTask InitializeAsync() => await factory.EnsureFamiliesAsync();
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     private async Task<HttpResponseMessage> LoginAsync(HttpClient client, string email, string password) =>
         await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password }, Ct);
@@ -201,6 +205,7 @@ public sealed class AuthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var client = factory.CreateAnonymousClient();
         var token = (await (await LoginAsync(client, created.Email, ApiFactory.DemoPassword)).Content.ReadFromJsonAsync<AuthResponse>(Json, Ct))!.AccessToken;
         client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+        await factory.JoinFamilyAAsync(client, "member"); // the family role is separate from the app permissions below
         (await client.PostAsJsonAsync("/api/v1/expenses", NewExpense, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
         using var admin = await factory.CreateClientForAsync(ApiFactory.AdminEmail);

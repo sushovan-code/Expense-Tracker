@@ -13,7 +13,8 @@ internal sealed class CategoryRepository(AppDbContext dbContext) : ICategoryRepo
         dbContext.Categories.AnyAsync(c => c.Name == name && c.Id != excludeId, cancellationToken);
 
     public Task<int> CountExpensesAsync(Guid categoryId, CancellationToken cancellationToken) =>
-        dbContext.Expenses.CountAsync(e => e.CategoryId == categoryId, cancellationToken);
+        // Counts every expense in the family, including other members' private ones, so a category in use can't be deleted.
+        dbContext.Expenses.IgnoreQueryFilters([AppDbContext.PrivateFilter]).CountAsync(e => e.CategoryId == categoryId, cancellationToken);
 
     public void Add(Category category) => dbContext.Categories.Add(category);
 

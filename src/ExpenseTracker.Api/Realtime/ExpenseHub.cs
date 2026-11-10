@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Common;
 using Microsoft.AspNetCore.SignalR;
 
@@ -7,7 +8,7 @@ namespace ExpenseTracker.Api.Realtime;
 /// Push-only hub: clients listen for change notifications; all writes still go through the REST API
 /// (validation, logging and problem details stay in one place).
 /// </summary>
-public sealed partial class ExpenseHub(PresenceTracker presence, ILogger<ExpenseHub> logger) : Hub<IExpenseHubClient>
+public sealed partial class ExpenseHub(PresenceTracker presence, ICurrentFamily family, ILogger<ExpenseHub> logger) : Hub<IExpenseHubClient>
 {
     public const string Path = "/hubs/expenses";
 
@@ -15,7 +16,12 @@ public sealed partial class ExpenseHub(PresenceTracker presence, ILogger<Expense
     {
         var online = presence.Add(Context.ConnectionId);
         LogClientConnected(logger, Context.ConnectionId, ClientId, online);
-        await Clients.All.PresenceChanged(new PresenceUpdate(online));
+        // Each connection listens only to its own family; someone without a family hears nothing.
+        if (family.FamilyId is { } familyId)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, FamilyGroup.Name(familyId));
+            await Clients.Group(FamilyGroup.Name(familyId)).PresenceChanged(new PresenceUpdate(online));
+        }
         await base.OnConnectedAsync();
     }
 
@@ -23,7 +29,10 @@ public sealed partial class ExpenseHub(PresenceTracker presence, ILogger<Expense
     {
         var online = presence.Remove(Context.ConnectionId);
         LogClientDisconnected(logger, exception, Context.ConnectionId, ClientId, online);
-        await Clients.Others.PresenceChanged(new PresenceUpdate(online));
+        if (family.FamilyId is { } familyId)
+        {
+            await Clients.OthersInGroup(FamilyGroup.Name(familyId)).PresenceChanged(new PresenceUpdate(online));
+        }
         await base.OnDisconnectedAsync(exception);
     }
 

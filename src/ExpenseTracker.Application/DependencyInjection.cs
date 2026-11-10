@@ -1,6 +1,7 @@
 using ExpenseTracker.Application.Features.Budgets;
 using ExpenseTracker.Application.Features.Categories;
 using ExpenseTracker.Application.Features.Expenses;
+using ExpenseTracker.Application.Features.Families;
 using ExpenseTracker.Application.Features.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -20,6 +21,7 @@ public static class DependencyInjection
 
         services.AddScoped<IExpenseService, ExpenseService>();
         services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IFamilyService, FamilyService>();
 
         services.AddScoped<BudgetService>();
         services.AddScoped<IBudgetService>(sp => sp.GetRequiredService<BudgetService>());
