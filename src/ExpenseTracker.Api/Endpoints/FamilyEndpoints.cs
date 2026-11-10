@@ -18,9 +18,11 @@ internal static class FamilyEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
-        group.MapGet("/mine", GetMine).WithName("GetMyFamily").WithSummary("Get my family, its members and open invites")
+        group.MapGet("/", ListMine).WithName("ListMyFamilies").WithSummary("The families I belong to");
+        group.MapGet("/mine", GetMine).WithName("GetMyFamily").WithSummary("Get my active family, its members and open invites")
+            .WithDescription("The active family is the one named by the X-Family-Id header, else the earliest joined.")
             .ProducesProblem(StatusCodes.Status403Forbidden);
-        group.MapPost("/", Create).WithName("CreateFamily").WithSummary("Create my family (I become its owner)")
+        group.MapPost("/", Create).WithName("CreateFamily").WithSummary("Create a family (I become its owner); I can create several")
             .ProducesValidationProblem().ProducesProblem(StatusCodes.Status409Conflict);
         group.MapPut("/mine", Rename).WithName("RenameFamily").WithSummary("Rename my family (owner)")
             .ProducesValidationProblem();
@@ -55,6 +57,9 @@ internal static class FamilyEndpoints
 
         return routes;
     }
+
+    private static async Task<Ok<IReadOnlyList<FamilySummaryDto>>> ListMine(IFamilyService service, CancellationToken ct) =>
+        TypedResults.Ok(await service.ListMineAsync(ct));
 
     private static async Task<Results<Ok<FamilyDto>, ProblemHttpResult>> GetMine(IFamilyService service, CancellationToken ct) =>
         (await service.GetMineAsync(ct)).ToHttpResult(TypedResults.Ok);

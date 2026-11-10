@@ -5,6 +5,9 @@ import { fakeFamiliesApi } from '@/test/fakeFamiliesApi'
 import { renderWithProviders } from '@/test/renderWithProviders'
 import { FamiliesApiToken } from '../api/familiesApi'
 import { AcceptInvitePage } from './AcceptInvitePage'
+import { switchActiveFamily } from '@/shared/family/activeFamily'
+
+vi.mock('@/shared/family/activeFamily', () => ({ switchActiveFamily: vi.fn(), getActiveFamilyId: () => null, FAMILY_HEADER: 'X-Family-Id' }))
 
 describe('AcceptInvitePage', () => {
   it('creates an account from the invite token', async () => {
@@ -30,6 +33,7 @@ describe('AcceptInvitePage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Join with this account' }))
 
     await waitFor(() => expect(api.join).toHaveBeenCalledWith('secret-token'))
+    await waitFor(() => expect(switchActiveFamily).toHaveBeenCalledWith('fam-1', '/family'))
   })
 
   it('explains an incomplete link', () => {

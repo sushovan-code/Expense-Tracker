@@ -1,0 +1,24 @@
+%% Register, sign in and create a family. Claude rewrites this via /update-diagrams.
+sequenceDiagram
+  autonumber
+  actor P as New person
+  participant W as Web app
+  participant A as API
+  participant D as SQLite
+
+  P->>W: name, email and password on the register page
+  W->>A: POST /api/v1/auth/register (anonymous, rate limited)
+  A->>D: is the email already registered?
+  alt email already registered
+    A-->>W: 400 with an email error
+  else new email
+    A->>D: create the account with the default User role
+    A-->>W: 204 No Content
+    W-->>P: go to sign in
+  end
+  P->>W: sign in as usual
+  P->>W: Create family, then New family for another one
+  W->>A: POST /api/v1/families
+  A->>D: add the family, the person as its Owner and the default categories
+  A-->>W: the new family, which becomes the active one
+  Note over W: the header selector switches between the person's families

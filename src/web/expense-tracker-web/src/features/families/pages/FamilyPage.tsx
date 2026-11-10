@@ -44,16 +44,21 @@ export function FamilyPage() {
             {family.members.length} {family.members.length === 1 ? 'member' : 'members'}
           </p>
         </div>
-        {vm.can.manage && (
-          <div className="page-actions">
-            <button type="button" className="button button--ghost" onClick={vm.inviteDialog.open}>
-              Invite link
-            </button>
-            <button type="button" className="button button--primary" onClick={vm.addDialog.open}>
-              <PlusIcon size={16} /> Add member
-            </button>
-          </div>
-        )}
+        <div className="page-actions">
+          <button type="button" className="button button--ghost" onClick={vm.newFamilyDialog.open}>
+            New family
+          </button>
+          {vm.can.manage && (
+            <>
+              <button type="button" className="button button--ghost" onClick={vm.inviteDialog.open}>
+                Invite link
+              </button>
+              <button type="button" className="button button--primary" onClick={vm.addDialog.open}>
+                <PlusIcon size={16} /> Add member
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <section className="card card--flush">
@@ -73,6 +78,10 @@ export function FamilyPage() {
           <FamilyNameForm initialName={family.name} submitLabel="Save name" onSubmit={vm.rename} />
         </section>
       )}
+
+      <Modal open={vm.newFamilyDialog.isOpen} title="New family" description="For example one for you and your wife, and one for your parents. You will be its Owner." onClose={vm.newFamilyDialog.close}>
+        <FamilyNameForm submitLabel="Create family" onSubmit={vm.createFamily} />
+      </Modal>
 
       <Modal open={vm.addDialog.isOpen} title="Add member" description="Creates an account for them and adds it to your family." onClose={vm.addDialog.close}>
         <AddMemberForm onSubmit={vm.addDialog.submit} onCancel={vm.addDialog.close} />

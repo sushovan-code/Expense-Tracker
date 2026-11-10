@@ -66,7 +66,7 @@ export function AcceptInvitePage() {
         )}
 
         {!vm.isSignedIn && (
-          <p className="muted form-hint">
+          <p className="muted auth-card__footnote">
             Already have an account? <Link to="/login">Sign in</Link>, then open this link again.
           </p>
         )}

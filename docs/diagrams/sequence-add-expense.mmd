@@ -9,8 +9,8 @@ sequenceDiagram
   participant O as Same family, other tabs
 
   U->>W: save the expense form
-  W->>A: POST /api/v1/expenses
-  Note over A: check permission expense.add, then look up<br/>the caller's family and family role
+  W->>A: POST /api/v1/expenses with X-Family-Id
+  Note over A: check permission expense.add, then pick the active family<br/>from the caller's own families (the header, else the earliest joined)<br/>and look up their role in it
   alt no family, or a Viewer
     A-->>W: 403 Forbidden
   else Owner or Member

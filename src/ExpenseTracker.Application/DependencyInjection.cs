@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IBudgetMonitor>(sp => sp.GetRequiredService<BudgetService>());
 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IRoleAdminService, RoleAdminService>();
         services.AddScoped<IApiKeyService, ApiKeyService>();

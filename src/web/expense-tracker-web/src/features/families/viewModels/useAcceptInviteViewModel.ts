@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { switchActiveFamily } from '@/shared/family/activeFamily'
 import { PASSWORD_HINT, passwordProblem } from '@/shared/auth/passwordPolicy'
 import { useSession } from '@/shared/auth/useSession'
 import { errorMessage } from '@/shared/lib/errors'
@@ -34,7 +35,7 @@ export function useAcceptInviteViewModel() {
     try {
       const family = await mutations.join.mutateAsync(token)
       toast.success('Welcome to the family', { description: family.name })
-      navigate('/family', { replace: true })
+      switchActiveFamily(family.id, '/family')
     } catch (err) {
       setFormError(errorMessage(err))
     }

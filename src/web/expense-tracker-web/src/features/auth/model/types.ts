@@ -30,3 +30,9 @@ export interface ChangePasswordInput {
 
 export const apiKeyStatus = (key: ApiKey, now = Date.now()): 'active' | 'revoked' | 'expired' =>
   key.revokedAt ? 'revoked' : Date.parse(key.expiresAt) <= now ? 'expired' : 'active'
+
+export interface RegisterInput {
+  email: string
+  displayName: string
+  password: string
+}

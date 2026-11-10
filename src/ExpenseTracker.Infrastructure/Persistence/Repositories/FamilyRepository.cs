@@ -17,6 +17,12 @@ internal sealed class FamilyRepository(AppDbContext dbContext) : IFamilyReposito
     public Task<int> CountOwnersAsync(Guid familyId, CancellationToken cancellationToken) =>
         dbContext.FamilyMembers.CountAsync(m => m.FamilyId == familyId && m.Role == FamilyRole.Owner, cancellationToken);
 
+    public Task<int> CountNonOwnerMembershipsAsync(Guid userId, CancellationToken cancellationToken) =>
+        dbContext.FamilyMembers.CountAsync(m => m.UserId == userId && m.Role != FamilyRole.Owner, cancellationToken);
+
+    public Task<bool> IsMemberAsync(Guid familyId, Guid userId, CancellationToken cancellationToken) =>
+        dbContext.FamilyMembers.AnyAsync(m => m.FamilyId == familyId && m.UserId == userId, cancellationToken);
+
     public Task<FamilyInvite?> GetInviteAsync(Guid familyId, Guid inviteId, CancellationToken cancellationToken) =>
         dbContext.FamilyInvites.FirstOrDefaultAsync(i => i.FamilyId == familyId && i.Id == inviteId, cancellationToken);
 

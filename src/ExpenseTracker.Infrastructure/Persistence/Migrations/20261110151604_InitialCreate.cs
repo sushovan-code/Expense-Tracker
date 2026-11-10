@@ -374,15 +374,15 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_FamilyMembers_FamilyId",
+                name: "IX_FamilyMembers_FamilyId_UserId",
                 table: "FamilyMembers",
-                column: "FamilyId");
+                columns: new[] { "FamilyId", "UserId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_FamilyMembers_UserId",
                 table: "FamilyMembers",
-                column: "UserId",
-                unique: true);
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_SessionId",

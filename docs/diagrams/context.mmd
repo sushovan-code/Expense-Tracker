@@ -5,13 +5,13 @@ flowchart LR
   classDef ext fill:#F1F5F9,stroke:#94A3B8,color:#334155,stroke-dasharray:4 3
 
   member([Family member<br/><small>app role plus family role<br/>Owner, Member or Viewer</small>])
-  invitee([Invited person<br/><small>opens a shared invite link</small>])
+  invitee([New or invited person<br/><small>registers, or opens a shared invite link</small>])
   script([Script or tool<br/><small>personal API key</small>])
   system[Expense Tracker<br/><small>families, expenses, categories, budgets,<br/>live updates, administration</small>]:::ours
   dashboard[Aspire dashboard<br/><small>logs, traces, metrics<br/>development only</small>]:::ext
 
   member -->|browser, HTTPS| system
-  invitee -->|accept invite, creates an account| system
+  invitee -->|register, or accept an invite| system
   script -->|REST + x-api-key| system
   system -. OpenTelemetry OTLP .-> dashboard
 

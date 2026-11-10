@@ -19,6 +19,13 @@ public static class FamilyPolicy
         _ => false,
     };
 
+    /// <summary>
+    /// A person may own any number of families, but may be a Member or Viewer in at most one.
+    /// <paramref name="nonOwnerMemberships"/> counts the Member and Viewer places they already hold.
+    /// </summary>
+    public static bool AllowsMembership(FamilyRole role, int nonOwnerMemberships) =>
+        role == FamilyRole.Owner || nonOwnerMemberships == 0;
+
     /// <summary>True when removing or demoting this member would leave the family without an owner.</summary>
     public static bool WouldLeaveNoOwner(FamilyRole currentRole, FamilyRole? newRole, int ownerCount) =>
         currentRole == FamilyRole.Owner && newRole != FamilyRole.Owner && ownerCount <= 1;

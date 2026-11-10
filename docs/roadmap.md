@@ -43,7 +43,7 @@ Built in two PRs: backend (`feature/2a-family-isolation`) and web, seed and docs
 
 **Data**
 - [ ] `Family` (Id Guid, Name, CreatedAt).
-- [ ] `FamilyMember` (FamilyId, UserId **unique**, Role: Owner | Member | Viewer, JoinedAt). One family per user.
+- [ ] `FamilyMember` (FamilyId, UserId **unique**, Role: Owner | Member | Viewer, JoinedAt). One family per user (changed in ADR 0008: a person owns any number of families and is a Member or Viewer in at most one).
 - [ ] `FamilyInvite` (Id, FamilyId, Role, TokenHash, CreatedByUserId, ExpiresAt = created + **48 h**, AcceptedAt?, RevokedAt?). The token is stored hashed and works once.
 - [ ] `Expense` gains `FamilyId`, `CreatedByUserId` and `IsPrivate`.
 - [ ] `Category` gains `FamilyId`; names are unique per family. The global `HasData` category seed is replaced by a default set copied into each new family.

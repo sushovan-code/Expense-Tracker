@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { UserMenu } from '@/features/auth'
+import { FamilySwitcher } from '@/features/families'
 import { Permission, Role } from '@/shared/auth/permissions'
 import { useAccess, type Access } from '@/shared/auth/useSession'
 import { ENV_LABEL } from '@/shared/config/env'
@@ -67,6 +68,7 @@ export function Layout() {
           </nav>
 
           <div className="app-header__end">
+            <FamilySwitcher />
             <ConnectionIndicator />
             <ThemeToggle />
             <UserMenu />

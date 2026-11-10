@@ -14,6 +14,7 @@ export const sharma: Family = {
 /** A families API fake whose methods are spies; pass overrides for the cases a test cares about. */
 export function fakeFamiliesApi(overrides: Partial<FamiliesApi> = {}): FamiliesApi {
   return {
+    listMine: vi.fn().mockResolvedValue([{ id: sharma.id, name: sharma.name, role: sharma.myRole }]),
     getMine: vi.fn().mockResolvedValue(sharma),
     create: vi.fn().mockResolvedValue(sharma),
     rename: vi.fn().mockResolvedValue(sharma),

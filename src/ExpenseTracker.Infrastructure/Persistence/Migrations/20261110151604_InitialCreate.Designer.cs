@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261110135131_InitialCreate")]
+    [Migration("20261110151604_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -182,9 +182,9 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FamilyId");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("FamilyId", "UserId")
                         .IsUnique();
 
                     b.ToTable("FamilyMembers");

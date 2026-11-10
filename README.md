@@ -5,7 +5,7 @@ A full-stack expense tracker built with React, TypeScript and Vite on the fronte
 ## Features
 
 - **Dashboard**: a month picker, totals with a comparison against the previous month, spending by category (donut chart), a 6-month trend (bar chart), **budget progress** and recent expenses. It updates live.
-- **Families**: each family has its own expenses, categories and budgets, and people only see their own family's data. Roles are **Owner** (manages members, invites, categories and budgets), **Member** (adds and edits their own expenses) and **Viewer** (read only). Owners add members directly or share a **48-hour, single-use invite link**. Mark an expense **Private** and only you see it, even the Owner. Family roles are separate from the app-wide roles (see [Signing in & access control](#signing-in--access-control)).
+- **Sign up and families**: anyone can **register** with an email that isn't used yet, then create **one or more families** (for example one for you and your wife, one for your parents) and switch between them from the header. Each family has its own expenses, categories and budgets, and people only see the data of the family they are working in. Roles are **Owner** (manages members, invites, categories and budgets), **Member** (adds and edits their own expenses) and **Viewer** (read only). Owners add members directly or share a **48-hour, single-use invite link**. A person can own any number of families but is a Member or Viewer in only one. Mark an expense **Private** and only you see it, even the Owner. Family roles are separate from the app-wide roles (see [Signing in & access control](#signing-in--access-control)).
 - **Expenses grid**: server-side **paging, sorting and filtering** (date range, category, member, search). Grid state lives in the URL, so views are shareable and survive reloads.
   - **Inline editing:** double-click a row or use the pencil; **Enter** saves and **Esc** cancels.
   - **Row selection** (it persists across pages) with **bulk delete**.
@@ -92,8 +92,11 @@ In Development the API also seeds two demo families, so you can see that familie
 | --- | --- |
 | Sharma family | `user@` (Owner), `admin@` (Member), `reader@` (Viewer), all on `@expensetracker.local` |
 | Verma family | `verma.owner@` (Owner), `verma.member@` (Member), same domain and `Password123` |
+| Sharma parents | `user@` (Owner) |
 
-`superadmin@` has no family: it manages users app-wide but sees no expenses until it creates or joins one. Family roles are separate from the app roles above: the app role decides whether you may use expenses at all, the family role decides whose data you see and what you may do in it (Owner manages members, invites, categories and budgets; Member adds and edits their own expenses; Viewer reads). Mark an expense **Private** and only you see it. Owners add members or create a 48-hour, single-use invite link on the **Family** page.
+**Starting from nothing:** open `/register` (or the Create an account link on the sign-in page), register, sign in, then use **Create family** on the Family page. Add people with **Add member** (creates their account) or an **Invite link** (for someone who already has an account or wants to choose their own password). Use **New family** for another family and the header selector to switch.
+
+`user@` also owns a third family, **Sharma parents**, so the family switcher shows in the header. `superadmin@` has no family: it manages users app-wide but sees no expenses until it creates or joins one. Family roles are separate from the app roles above: the app role decides whether you may use expenses at all, the family role decides whose data you see and what you may do in it (Owner manages members, invites, categories and budgets; Member adds and edits their own expenses; Viewer reads). Mark an expense **Private** and only you see it. Owners add members or create a 48-hour, single-use invite link on the **Family** page.
 
 - **Browser:** sign in at `/login`; sign out from the avatar menu (`/logout`). Manage your password and API keys at `/account`, and users, roles and claims at `/admin` (Admin or above).
 - **Scripts:** create a personal API key on the account page (or `POST /api/v1/auth/api-keys`) and send it as `x-api-key`. Keys expire and can be limited to specific permissions.
@@ -241,23 +244,25 @@ Every REST route is versioned under `/api/v1` (`Endpoints/ApiRoutes.cs`, ADR 000
 | POST | `/api/v1/categories` | Body includes the optional `monthlyBudget` |
 | PUT/DELETE | `/api/v1/categories/{id}` | DELETE returns 409 if the category has expenses |
 | GET | `/api/v1/budgets` | Query: `year`, `month` (default: current month). Budget status per category |
-| GET | `/api/v1/families/mine` | My family with its members and (for owners) open invites. `403` when I have no family yet |
-| POST | `/api/v1/families` | Create my family; I become its Owner and it gets the default categories |
+| GET | `/api/v1/families/mine` | My **active** family with its members and (for owners) open invites. The active family is the one named by the `X-Family-Id` header (an id I don't belong to is ignored), else the earliest joined. `403` when I have no family yet |
+| POST | `/api/v1/auth/register` | **Anonymous, rate-limited.** Body: `email`, `displayName`, `password`. Creates the account with the default User role; an email that is already registered returns `400` with an `email` error |
+| GET | `/api/v1/families` | Every family I belong to (`id`, `name`, my `role`), earliest joined first |
+| POST | `/api/v1/families` | Create a family; I become its Owner and it gets the default categories. I can create several |
 | PUT | `/api/v1/families/mine` | Rename the family (Owner) |
 | POST | `/api/v1/families/members` | Create an account and add it to the family (Owner) |
 | PUT/DELETE | `/api/v1/families/members/{userId}[/role]` | Change a role or remove a member (Owner). The last Owner can't be demoted or removed |
 | POST | `/api/v1/families/leave` | Leave my family |
 | POST | `/api/v1/families/invites` | Create an invite token, shown once (Owner). Valid for 48 hours and one use |
 | DELETE | `/api/v1/families/invites/{id}` | Revoke an invite (Owner) |
-| POST | `/api/v1/families/invites/join` | A signed-in user without a family joins with an invite token |
+| POST | `/api/v1/families/invites/join` | A signed-in user joins with an invite token. Refused (`409`) if they are already in that family, or if the role is Member or Viewer and they already hold one |
 | POST | `/api/v1/families/invites/accept` | **Anonymous, rate-limited.** Creates the account from an invite and joins the family |
 | WS | `/hubs/expenses` | SignalR hub (see below) |
 
-Unknown sort fields, invalid ranges and out-of-range page sizes return `400` validation problems. A page past the end is clamped to the last page. Another family's ids return `404`, never `403`, so their existence isn't revealed. A signed-in user without a family sees empty lists and gets `403` when adding data.
+Unknown sort fields, invalid ranges and out-of-range page sizes return `400` validation problems. A page past the end is clamped to the last page. Another family's ids return `404`, never `403`, so their existence isn't revealed. A signed-in user without a family sees empty lists and gets `403` when adding data. Send `X-Family-Id` on any call to choose which of your families it is about (the web app does this for you).
 
 ### Realtime (SignalR)
 
-The hub is push-only: all writes go through the REST API, which keeps validation, logging and error handling in one place. After a successful change, the API broadcasts one of these events. Each connection joins its family's group, so events reach only the people in the same family (a person without a family gets none):
+The hub is push-only: all writes go through the REST API, which keeps validation, logging and error handling in one place. After a successful change, the API broadcasts one of these events. Each connection names its family with the `familyId` query parameter (the active family) and joins that family's group, so events reach only the people in the same family (a person without a family gets none):
 
 | Event | Payload | Sent when |
 | --- | --- | --- |
@@ -276,10 +281,11 @@ There are sample requests in `src/ExpenseTracker.Api/ExpenseTracker.Api.http`.
 
 | Diagram | Shows |
 | --- | --- |
-| [Context](docs/diagrams/context.svg) | Who uses the system (family members, invited people, API-key scripts) and what it talks to (the Aspire dashboard in development). |
+| [Context](docs/diagrams/context.svg) | Who uses the system (family members who register themselves, invited people, API-key scripts) and what it talks to (the Aspire dashboard in development). |
 | [Containers](docs/diagrams/containers.svg) | The SPA, the API with its SignalR hub, Identity and family layer, the in-memory cache and the SQLite database. |
 | [Sign-in](docs/diagrams/sequence-login.svg) | Login, the in-memory access token, and the rotating refresh cookie. |
 | [Add an expense](docs/diagrams/sequence-add-expense.svg) | The family lookup and role check, validation, saving, the budget check, and live updates and alerts to the family over SignalR. |
+| [Register](docs/diagrams/sequence-register.svg) | Anyone creating their own account, then signing in and creating a family. |
 | [Invite and join](docs/diagrams/sequence-invite.svg) | An Owner creates an invite link, and the invited person creates an account and joins the family. |
 | [Family invite lifecycle](docs/diagrams/state-family-invite.svg) | An invite is open, then accepted, revoked or expired. |
 | [Azure deployment](docs/diagrams/deployment-azure.png) | **Placeholder** until the Stage 2 Terraform exists; shows the intended shape only. |
@@ -312,7 +318,7 @@ cd src\web\expense-tracker-web
 npm test          # or: npm run check  (type-check + lint + tests)
 ```
 
-The integration tests include two-family isolation checks (one family gets `404` or empty results for the other's expenses and categories, private expenses stay private, roles are enforced). The API integration tests host the real API in memory against a **throwaway SQLite file** per test class (`%TEMP%/expense-tracker-tests-<guid>.db`), which is created by migrations and deleted at the end. No Docker or database install is needed, so CI runs them on Linux. Your development database is never touched.
+The integration tests cover registration (including a duplicate email), one person owning several families with separate data per `X-Family-Id`, the Member or Viewer rule, and two-family isolation checks (one family gets `404` or empty results for the other's expenses and categories, private expenses stay private, roles are enforced). The API integration tests host the real API in memory against a **throwaway SQLite file** per test class (`%TEMP%/expense-tracker-tests-<guid>.db`), which is created by migrations and deleted at the end. No Docker or database install is needed, so CI runs them on Linux. Your development database is never touched.
 
 ## Repository layout
 
