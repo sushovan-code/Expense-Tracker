@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Application.Abstractions.Queries;
 using ExpenseTracker.Application.Abstractions.Realtime;
@@ -7,6 +8,7 @@ using ExpenseTracker.Application.Features.Budgets;
 using ExpenseTracker.Domain.Categories;
 using ExpenseTracker.Domain.Common;
 using ExpenseTracker.Domain.Expenses;
+using ExpenseTracker.Domain.Families;
 using Microsoft.Extensions.Logging;
 
 namespace ExpenseTracker.Application.Features.Expenses;
@@ -15,7 +17,7 @@ public interface IExpenseService
 {
     Task<Result<ExpensePage>> ListAsync(ExpenseListRequest request, CancellationToken cancellationToken);
     Task<Result<IReadOnlyList<ExpenseDto>>> ExportAsync(ExpenseFilter filter, string? sortBy, string? sortDir, CancellationToken cancellationToken);
-    Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken);
+    Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, Guid? memberId, CancellationToken cancellationToken);
     Task<Result<ExpenseDto>> GetAsync(Guid id, CancellationToken cancellationToken);
     Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken cancellationToken);
     Task<Result<ExpenseDto>> UpdateAsync(Guid id, ExpenseCommand command, CancellationToken cancellationToken);
@@ -29,6 +31,7 @@ internal sealed partial class ExpenseService(
     IUnitOfWork unitOfWork,
     IExpenseQueries queries,
     IBudgetMonitor budgets,
+    ICurrentFamily current,
     IChangeNotifier notifier,
     TimeProvider clock,
     ILogger<ExpenseService> logger) : IExpenseService
@@ -61,11 +64,11 @@ internal sealed partial class ExpenseService(
         return Result<IReadOnlyList<ExpenseDto>>.Success(rows);
     }
 
-    public async Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
+    public async Task<Result<ExpenseSummary>> SummarizeAsync(DateOnly? from, DateOnly? to, Guid? memberId, CancellationToken cancellationToken)
     {
         if (from > to) return ExpenseErrors.InvalidDateRange;
 
-        var summary = await queries.SummarizeAsync(from, to, cancellationToken);
+        var summary = await queries.SummarizeAsync(from, to, memberId, cancellationToken);
         LogSummaryComputed(logger, from, to, summary.Count, summary.Total);
         return summary;
     }
@@ -81,10 +84,13 @@ internal sealed partial class ExpenseService(
 
     public async Task<Result<ExpenseDto>> CreateAsync(ExpenseCommand command, CancellationToken cancellationToken)
     {
+        if (current.FamilyId is not { } familyId || current.Role is not { } role) return FamilyErrors.NoFamily;
+        if (!FamilyPolicy.CanAddExpense(role)) return FamilyErrors.NotAllowed;
+
         var category = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
         if (category is null) return ExpenseErrors.UnknownCategory;
 
-        var created = Expense.Create(ToDetails(command), clock.GetUtcNow().UtcDateTime);
+        var created = Expense.Create(ToDetails(command), clock.GetUtcNow().UtcDateTime, familyId, current.UserId);
         if (!created.IsSuccess) return created.Error;
         var expense = created.Value;
 
@@ -106,6 +112,7 @@ internal sealed partial class ExpenseService(
             LogExpenseNotFound(logger, id);
             return ExpenseErrors.NotFound(id);
         }
+        if (!CanChange(expense)) return FamilyErrors.NotAllowed;
 
         var category = await categories.GetByIdAsync(command.CategoryId, cancellationToken);
         if (category is null) return ExpenseErrors.UnknownCategory;
@@ -130,7 +137,9 @@ internal sealed partial class ExpenseService(
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
-        if (!await expenses.DeleteAsync(id, cancellationToken))
+        var expense = await expenses.GetByIdAsync(id, cancellationToken);
+        if (expense is not null && !CanChange(expense)) return FamilyErrors.NotAllowed;
+        if (expense is null || !await expenses.DeleteAsync(id, cancellationToken))
         {
             LogExpenseNotFound(logger, id);
             return ExpenseErrors.NotFound(id);
@@ -143,8 +152,13 @@ internal sealed partial class ExpenseService(
 
     public async Task<Result<BulkDeleteResult>> BulkDeleteAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
+        if (current.Role is not { } role) return FamilyErrors.NoFamily;
+        if (role == FamilyRole.Viewer) return FamilyErrors.NotAllowed;
+
+        // Members can only delete their own expenses; others in the list are skipped.
+        var onlyCreatedBy = role == FamilyRole.Owner ? (Guid?)null : current.UserId;
         var requested = ids.Distinct().ToArray();
-        var deleted = await expenses.DeleteManyAsync(requested, cancellationToken);
+        var deleted = await expenses.DeleteManyAsync(requested, onlyCreatedBy, cancellationToken);
 
         LogExpensesBulkDeleted(logger, deleted.Count, requested.Length, requested.Length - deleted.Count);
         if (deleted.Count > 0) await notifier.ExpensesChangedAsync(ChangeAction.Deleted, deleted, cancellationToken);
@@ -160,12 +174,15 @@ internal sealed partial class ExpenseService(
         }
     }
 
+    private bool CanChange(Expense expense) =>
+        current.Role is { } role && FamilyPolicy.CanChangeExpense(role, expense.CreatedByUserId == current.UserId);
+
     private static bool IsValidRange(ExpenseFilter filter) => !(filter.From > filter.To);
 
-    private static ExpenseDetails ToDetails(ExpenseCommand c) => new(c.Description, c.Amount, c.Date, c.CategoryId, c.Notes);
+    private static ExpenseDetails ToDetails(ExpenseCommand c) => new(c.Description, c.Amount, c.Date, c.CategoryId, c.Notes, c.IsPrivate);
 
     private static ExpenseDto ToDto(Expense e, Category c) =>
-        new(e.Id, e.Description, e.Amount, e.Date, e.CategoryId, c.Name, c.Color, e.Notes, e.CreatedAt);
+        new(e.Id, e.Description, e.Amount, e.Date, e.CategoryId, c.Name, c.Color, e.Notes, e.CreatedAt, e.IsPrivate, e.CreatedByUserId);
 
     // Logs carry ids, amounts and dates — never free-text descriptions or notes, which may contain personal data.
 

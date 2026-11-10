@@ -1,4 +1,5 @@
 using ExpenseTracker.Domain.Expenses;
+using ExpenseTracker.Domain.Families;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,6 +14,8 @@ internal sealed class ExpenseConfiguration : IEntityTypeConfiguration<Expense>
         builder.Property(e => e.Notes).HasMaxLength(Expense.NotesMaxLength).UseCollation(SqliteCollations.CaseInsensitive);
         builder.Property(e => e.Amount).HasPrecision(18, 2);
         builder.HasIndex(e => e.Date);
+        builder.HasIndex(e => e.FamilyId);
+        builder.HasOne<Family>().WithMany().HasForeignKey(e => e.FamilyId).OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(e => e.Category)
             .WithMany(c => c.Expenses)

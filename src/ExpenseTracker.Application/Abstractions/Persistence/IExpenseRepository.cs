@@ -11,6 +11,9 @@ public interface IExpenseRepository
     /// <summary>Deletes immediately (set-based); returns false when the expense didn't exist.</summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Deletes the given ids that exist; returns the ids actually deleted.</summary>
-    Task<IReadOnlyList<Guid>> DeleteManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+    /// <summary>
+    /// Deletes the given ids that exist (and, when <paramref name="onlyCreatedBy"/> is set, were created by that user);
+    /// returns the ids actually deleted.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> DeleteManyAsync(IReadOnlyCollection<Guid> ids, Guid? onlyCreatedBy, CancellationToken cancellationToken);
 }

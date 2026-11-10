@@ -1,9 +1,11 @@
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Application.Abstractions.Queries;
 using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
 using ExpenseTracker.Domain.Categories;
 using ExpenseTracker.Domain.Common;
+using ExpenseTracker.Domain.Families;
 using Microsoft.Extensions.Logging;
 
 namespace ExpenseTracker.Application.Features.Categories;
@@ -22,6 +24,7 @@ internal sealed partial class CategoryService(
     IUnitOfWork unitOfWork,
     ICategoryQueries queries,
     IChangeNotifier notifier,
+    ICurrentFamily current,
     ILogger<CategoryService> logger) : ICategoryService
 {
     public async Task<Result<PagedResult<CategoryDto>>> ListAsync(CategoryListRequest request, CancellationToken cancellationToken)
@@ -38,10 +41,11 @@ internal sealed partial class CategoryService(
 
     public async Task<Result<CategoryDto>> CreateAsync(CategoryCommand command, CancellationToken cancellationToken)
     {
+        if (RequireManager() is { } denied) return denied;
         if (await categories.NameExistsAsync(Category.NormalizeName(command.Name), excludeId: null, cancellationToken))
             return CategoryErrors.DuplicateName;
 
-        var created = Category.Create(command.Name, command.Color, command.MonthlyBudget);
+        var created = Category.Create(command.Name, command.Color, command.MonthlyBudget, current.FamilyId!.Value);
         if (!created.IsSuccess) return created.Error;
         var category = created.Value;
 
@@ -55,6 +59,7 @@ internal sealed partial class CategoryService(
 
     public async Task<Result<CategoryDto>> UpdateAsync(Guid id, CategoryCommand command, CancellationToken cancellationToken)
     {
+        if (RequireManager() is { } denied) return denied;
         var category = await categories.GetByIdAsync(id, cancellationToken);
         if (category is null)
         {
@@ -78,6 +83,7 @@ internal sealed partial class CategoryService(
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
+        if (RequireManager() is { } denied) return denied;
         var category = await categories.GetByIdAsync(id, cancellationToken);
         if (category is null)
         {
@@ -98,6 +104,12 @@ internal sealed partial class CategoryService(
         LogCategoryDeleted(logger, category.Id, category.Name);
         await notifier.CategoriesChangedAsync(ChangeAction.Deleted, [category.Id], cancellationToken);
         return Result.Success();
+    }
+
+    private Error? RequireManager()
+    {
+        if (current.FamilyId is null || current.Role is not { } role) return FamilyErrors.NoFamily;
+        return FamilyPolicy.CanManageFamily(role) ? null : FamilyErrors.NotAllowed;
     }
 
     private static CategoryDto ToDto(Category c, int expenseCount) => new(c.Id, c.Name, c.Color, c.MonthlyBudget, expenseCount);

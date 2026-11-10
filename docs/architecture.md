@@ -66,6 +66,10 @@ request ─▶ JwtOrApiKey policy scheme ──┬─ x-api-key header? ─▶ A
 | Endpoints | `Api/Auth`, `Endpoints/AuthEndpoints.cs`, `AdminEndpoints.cs` | Deny-by-default fallback policy; `.RequirePermission(...)` via `IAuthorizationRequirementData`; `/api/v1/admin/*` needs Admin or above **and** the specific permission. Rate-limited login/refresh. Audit log events 6xxx. |
 | Browser | `shared/auth`, `features/auth`, `features/admin` | Access token in memory only; silent refresh before expiry and on 401 (single-flight, Web Locks across tabs); sign-in/out broadcast to other tabs; route guards and permission-aware UI (cosmetic: the API enforces everything). SignalR connects with the token and is closed when it expires. |
 
+### Family access (a separate layer)
+
+After the app permission passes, `FamilyContextMiddleware` loads the caller's family membership once per request into `ICurrentFamily`. EF Core query filters then scope every expense and category read and write to that family (and hide other people's private expenses), and `FamilyPolicy` limits what each family role may do. Nothing here touches roles, claims or tokens. See ADR 0007.
+
 Adding a permission: add it to `Permissions.cs` (and `shared/auth/permissions.ts`), grant it in `AppRoles` defaults, and put `.RequirePermission(...)` on the endpoint. New permissions reach existing Admin/User/Reader roles only through the Roles admin screen (seeding never overwrites edited roles); SuperAdmin always has everything.
 
 ## Frontend: MVVM-style React

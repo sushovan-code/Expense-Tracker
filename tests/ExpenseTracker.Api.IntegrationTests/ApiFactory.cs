@@ -22,8 +22,19 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string ReaderEmail = "reader@tests.local";
     public const string DemoPassword = "Password123";
 
-    /// <summary>The seeded "Food" category (fixed ID in CategoryConfiguration).</summary>
-    public static readonly Guid SeededFoodCategoryId = Guid.Parse("0192f0a0-0000-7000-8000-000000000001");
+    /// <summary>
+    /// Family A: user@ is the Owner, admin@ a Member and reader@ a Viewer. Family B: superadmin@ is the Owner.
+    /// Created through the API by <see cref="EnsureFamiliesAsync"/>.
+    /// </summary>
+    public const string FamilyAOwnerEmail = UserEmail;
+    public const string FamilyBOwnerEmail = SuperAdminEmail;
+
+    private readonly SemaphoreSlim _familySetup = new(1, 1);
+    private bool _familiesReady;
+
+    /// <summary>The "Food" category of family A / family B (each family gets its own copy of the defaults).</summary>
+    public Guid FamilyAFoodCategoryId { get; private set; }
+    public Guid FamilyBFoodCategoryId { get; private set; }
 
     private readonly string _connectionString =
         $"Data Source={Path.Combine(Path.GetTempPath(), $"expense-tracker-tests-{Guid.NewGuid():N}.db")}";
@@ -67,6 +78,49 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     }
 
     private sealed record TokenResponse(string AccessToken);
+    private sealed record InviteResponse(Guid Id, string Token);
+    private sealed record CategoryLookup(Guid Id, string Name);
+
+    /// <summary>Creates the two test families once (idempotent, safe to call from every test class).</summary>
+    public async Task EnsureFamiliesAsync()
+    {
+        await _familySetup.WaitAsync();
+        try
+        {
+            if (_familiesReady) return;
+
+            using var ownerA = await CreateClientForAsync(FamilyAOwnerEmail);
+            (await ownerA.PostAsJsonAsync("/api/v1/families", new { name = "Family A" })).EnsureSuccessStatusCode();
+            using var admin = await CreateClientForAsync(AdminEmail);
+            await JoinFamilyAAsync(admin, "member");
+            using var reader = await CreateClientForAsync(ReaderEmail);
+            await JoinFamilyAAsync(reader, "viewer");
+
+            using var ownerB = await CreateClientForAsync(FamilyBOwnerEmail, SuperAdminPassword);
+            (await ownerB.PostAsJsonAsync("/api/v1/families", new { name = "Family B" })).EnsureSuccessStatusCode();
+
+            FamilyAFoodCategoryId = await FoodCategoryIdAsync(ownerA);
+            FamilyBFoodCategoryId = await FoodCategoryIdAsync(ownerB);
+            _familiesReady = true;
+        }
+        finally
+        {
+            _familySetup.Release();
+        }
+    }
+
+    /// <summary>Family A's owner invites the signed-in client, who joins with the invite token.</summary>
+    public async Task JoinFamilyAAsync(HttpClient client, string role)
+    {
+        using var ownerA = await CreateClientForAsync(FamilyAOwnerEmail);
+        var invite = await ownerA.PostAsJsonAsync("/api/v1/families/invites", new { role });
+        invite.EnsureSuccessStatusCode();
+        var token = (await invite.Content.ReadFromJsonAsync<InviteResponse>())!.Token;
+        (await client.PostAsJsonAsync("/api/v1/families/invites/join", new { token })).EnsureSuccessStatusCode();
+    }
+
+    private static async Task<Guid> FoodCategoryIdAsync(HttpClient client) =>
+        (await client.GetFromJsonAsync<List<CategoryLookup>>("/api/v1/categories/lookup"))!.Single(c => c.Name == "Food").Id;
 
     public override async ValueTask DisposeAsync()
     {

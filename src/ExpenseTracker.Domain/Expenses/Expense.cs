@@ -20,12 +20,18 @@ public sealed class Expense : Entity
     public string? Notes { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
 
+    public Guid FamilyId { get; private set; }
+    public Guid CreatedByUserId { get; private set; }
+
+    /// <summary>A private expense is visible only to the person who created it.</summary>
+    public bool IsPrivate { get; private set; }
+
     public Guid CategoryId { get; private set; }
     public Category? Category { get; private set; }
 
-    public static Result<Expense> Create(ExpenseDetails details, DateTimeOffset createdAt)
+    public static Result<Expense> Create(ExpenseDetails details, DateTimeOffset createdAt, Guid familyId, Guid createdByUserId)
     {
-        var expense = new Expense { CreatedAt = createdAt };
+        var expense = new Expense { CreatedAt = createdAt, FamilyId = familyId, CreatedByUserId = createdByUserId };
         var applied = expense.Apply(details);
         return applied.IsSuccess ? expense : applied.Error;
     }
@@ -55,6 +61,7 @@ public sealed class Expense : Entity
         Date = details.Date;
         CategoryId = details.CategoryId;
         Notes = notes;
+        IsPrivate = details.IsPrivate;
         return Result.Success();
     }
 }

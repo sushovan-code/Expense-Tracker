@@ -12,7 +12,11 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     private HttpClient _client = null!;
     private static readonly CancellationToken Ct = CancellationToken.None;
 
-    public async ValueTask InitializeAsync() => _client = await factory.CreateClientForAsync(ApiFactory.UserEmail);
+    public async ValueTask InitializeAsync()
+    {
+        await factory.EnsureFamiliesAsync();
+        _client = await factory.CreateClientForAsync(ApiFactory.UserEmail);
+    }
 
     public ValueTask DisposeAsync()
     {
@@ -88,7 +92,7 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>, IA
     [Fact]
     public async Task Request_validation_reports_each_invalid_field()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/expenses", new { description = "", amount = 0, date = "2026-10-05", categoryId = ApiFactory.SeededFoodCategoryId }, Ct);
+        var response = await _client.PostAsJsonAsync("/api/v1/expenses", new { description = "", amount = 0, date = "2026-10-05", categoryId = factory.FamilyAFoodCategoryId }, Ct);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         var problem = await response.Content.ReadFromJsonAsync<Problem>(Json, Ct);

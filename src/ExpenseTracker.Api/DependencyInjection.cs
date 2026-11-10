@@ -100,6 +100,7 @@ internal static partial class DependencyInjection
         api.MapAdminEndpoints();
         api.MapExpenseEndpoints();
         api.MapCategoryEndpoints();
+        api.MapFamilyEndpoints();
         api.MapBudgetEndpoints();
 
         // Signed-in users only. The connection is closed when its access token expires, and the client

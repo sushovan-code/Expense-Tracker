@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Abstractions.Realtime;
 using ExpenseTracker.Application.Common;
 using Microsoft.AspNetCore.SignalR;
@@ -8,20 +9,25 @@ namespace ExpenseTracker.Api.Realtime;
 internal sealed partial class SignalRChangeNotifier(
     IHubContext<ExpenseHub, IExpenseHubClient> hub,
     IHttpContextAccessor httpContext,
+    ICurrentFamily family,
     ILogger<SignalRChangeNotifier> logger) : IChangeNotifier
 {
     public const string ClientIdHeader = "X-Client-Id";
 
     public Task ExpensesChangedAsync(ChangeAction action, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         SendAsync(nameof(IExpenseHubClient.ExpensesChanged), ids.Count,
-            () => hub.Clients.All.ExpensesChanged(new ChangeNotice(ToWire(action), ids, OriginClientId)));
+            () => FamilyClients.ExpensesChanged(new ChangeNotice(ToWire(action), ids, OriginClientId)));
 
     public Task CategoriesChangedAsync(ChangeAction action, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         SendAsync(nameof(IExpenseHubClient.CategoriesChanged), ids.Count,
-            () => hub.Clients.All.CategoriesChanged(new ChangeNotice(ToWire(action), ids, OriginClientId)));
+            () => FamilyClients.CategoriesChanged(new ChangeNotice(ToWire(action), ids, OriginClientId)));
 
     public Task BudgetExceededAsync(BudgetAlert alert, CancellationToken cancellationToken) =>
-        SendAsync(nameof(IExpenseHubClient.BudgetExceeded), 1, () => hub.Clients.All.BudgetExceeded(alert));
+        SendAsync(nameof(IExpenseHubClient.BudgetExceeded), 1, () => FamilyClients.BudgetExceeded(alert));
+
+    // Events go only to the caller's family. Without one there is nobody to tell (an empty group).
+    private IExpenseHubClient FamilyClients =>
+        hub.Clients.Group(family.FamilyId is { } id ? FamilyGroup.Name(id) : FamilyGroup.None);
 
     private static string ToWire(ChangeAction action) => action.ToString().ToLowerInvariant();
 

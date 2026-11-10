@@ -1,4 +1,5 @@
 using ExpenseTracker.Api;
+using ExpenseTracker.Api.Auth;
 using ExpenseTracker.Api.Configuration;
 using ExpenseTracker.Api.Middleware;
 using ExpenseTracker.Application;
@@ -73,6 +74,7 @@ app.UseCors(CorsPolicyOptions.PolicyName);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<FamilyContextMiddleware>(); // after the existing auth: reads the caller's family, changes nothing
 app.MapApiEndpoints();
 
 await app.RunAsync();

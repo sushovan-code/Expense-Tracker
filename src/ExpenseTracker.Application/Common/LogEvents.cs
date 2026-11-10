@@ -66,4 +66,7 @@ public static class LogEvents
     public const int AdministrationDenied = 6050;
     public const int IdentitySeeded = 6060;
     public const int IdentitySeedSkipped = 6061;
+
+    // 6070 – family membership changes
+    public const int FamilyChanged = 6070;
 }

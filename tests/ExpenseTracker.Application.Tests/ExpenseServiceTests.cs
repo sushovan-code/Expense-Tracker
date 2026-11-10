@@ -1,3 +1,4 @@
+using ExpenseTracker.Application.Abstractions.Families;
 using ExpenseTracker.Application.Abstractions.Persistence;
 using ExpenseTracker.Application.Abstractions.Queries;
 using ExpenseTracker.Application.Abstractions.Realtime;
@@ -7,6 +8,7 @@ using ExpenseTracker.Application.Features.Expenses;
 using ExpenseTracker.Domain.Categories;
 using ExpenseTracker.Domain.Common;
 using ExpenseTracker.Domain.Expenses;
+using ExpenseTracker.Domain.Families;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
@@ -20,16 +22,22 @@ public class ExpenseServiceTests
     private readonly IExpenseQueries _queries = Substitute.For<IExpenseQueries>();
     private readonly IBudgetMonitor _budgets = Substitute.For<IBudgetMonitor>();
     private readonly IChangeNotifier _notifier = Substitute.For<IChangeNotifier>();
+    private readonly ICurrentFamily _family = Substitute.For<ICurrentFamily>();
     private readonly ExpenseService _service;
 
-    private static readonly Category Food = Category.Create("Food", "#f97316", null).Value!;
+    private static readonly Category Food = Category.Create("Food", "#f97316", null, FamilyId).Value!;
     private static readonly CancellationToken Ct = CancellationToken.None;
     private static readonly Guid FoodId = TestIds.Of(1);
+    private static readonly Guid FamilyId = TestIds.Of(500);
+    private static readonly Guid UserId = TestIds.Of(600);
 
     public ExpenseServiceTests()
     {
+        _family.UserId.Returns(UserId);
+        _family.FamilyId.Returns(FamilyId);
+        _family.Role.Returns(FamilyRole.Owner);
         _categories.GetByIdAsync(FoodId, Arg.Any<CancellationToken>()).Returns(Food);
-        _service = new ExpenseService(_expenses, _categories, _unitOfWork, _queries, _budgets, _notifier,
+        _service = new ExpenseService(_expenses, _categories, _unitOfWork, _queries, _budgets, _family, _notifier,
             new FixedTimeProvider(), NullLogger<ExpenseService>.Instance);
     }
 
@@ -81,12 +89,57 @@ public class ExpenseServiceTests
     [Fact]
     public async Task Update_checks_the_budget_with_only_the_added_amount()
     {
-        var existing = Expense.Create(new ExpenseDetails("Groceries", 100m, new DateOnly(2026, 10, 1), FoodId, null), DateTimeOffset.UtcNow).Value!;
+        var existing = Expense.Create(new ExpenseDetails("Groceries", 100m, new DateOnly(2026, 10, 1), FoodId, null), DateTimeOffset.UtcNow, FamilyId, UserId).Value!;
         _expenses.GetByIdAsync(TestIds.Of(7), Ct).Returns(existing);
 
         await _service.UpdateAsync(TestIds.Of(7), Command(amount: 130m), Ct);
 
         await _budgets.Received(1).DetectOverrunAsync(FoodId, new DateOnly(2026, 10, 5), 30m, Ct);
+    }
+
+    [Fact]
+    public async Task Create_without_a_family_is_refused()
+    {
+        _family.FamilyId.Returns((Guid?)null);
+        _family.Role.Returns((FamilyRole?)null);
+
+        var result = await _service.CreateAsync(Command(), Ct);
+
+        result.Error.ShouldBe(FamilyErrors.NoFamily);
+        _expenses.DidNotReceiveWithAnyArgs().Add(default!);
+    }
+
+    [Fact]
+    public async Task A_viewer_cannot_add_expenses()
+    {
+        _family.Role.Returns(FamilyRole.Viewer);
+
+        var result = await _service.CreateAsync(Command(), Ct);
+
+        result.Error.ShouldBe(FamilyErrors.NotAllowed);
+    }
+
+    [Fact]
+    public async Task A_member_cannot_edit_or_delete_someone_elses_expense()
+    {
+        _family.Role.Returns(FamilyRole.Member);
+        var others = Expense.Create(new ExpenseDetails("Rent", 10m, new DateOnly(2026, 10, 1), FoodId, null),
+            DateTimeOffset.UtcNow, FamilyId, TestIds.Of(601)).Value!;
+        _expenses.GetByIdAsync(TestIds.Of(7), Ct).Returns(others);
+
+        (await _service.UpdateAsync(TestIds.Of(7), Command(), Ct)).Error.ShouldBe(FamilyErrors.NotAllowed);
+        (await _service.DeleteAsync(TestIds.Of(7), Ct)).Error.ShouldBe(FamilyErrors.NotAllowed);
+    }
+
+    [Fact]
+    public async Task A_member_bulk_deletes_only_their_own_expenses()
+    {
+        _family.Role.Returns(FamilyRole.Member);
+        _expenses.DeleteManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), UserId, Ct).Returns([TestIds.Of(1)]);
+
+        var result = await _service.BulkDeleteAsync([TestIds.Of(1), TestIds.Of(2)], Ct);
+
+        result.Value!.Deleted.ShouldBe(1);
     }
 
     [Fact]
@@ -103,12 +156,12 @@ public class ExpenseServiceTests
     [Fact]
     public async Task Bulk_delete_reports_what_was_actually_deleted()
     {
-        _expenses.DeleteManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Ct).Returns([TestIds.Of(1), TestIds.Of(2)]);
+        _expenses.DeleteManyAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<Guid?>(), Ct).Returns([TestIds.Of(1), TestIds.Of(2)]);
 
         var result = await _service.BulkDeleteAsync([TestIds.Of(1), TestIds.Of(2), TestIds.Of(2), TestIds.Of(3)], Ct);
 
         result.Value!.Deleted.ShouldBe(2);
-        await _expenses.Received(1).DeleteManyAsync(Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 3), Ct);
+        await _expenses.Received(1).DeleteManyAsync(Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 3), null, Ct);
     }
 
     [Theory]
@@ -144,7 +197,7 @@ public class ExpenseServiceTests
     }
 
     private static ExpenseDto SampleDto() =>
-        new(TestIds.Of(1), "x", 1m, new DateOnly(2026, 1, 1), FoodId, "Food", "#f97316", null, DateTimeOffset.UtcNow);
+        new(TestIds.Of(1), "x", 1m, new DateOnly(2026, 1, 1), FoodId, "Food", "#f97316", null, DateTimeOffset.UtcNow, false, UserId);
 }
 
 internal sealed class FixedTimeProvider : TimeProvider

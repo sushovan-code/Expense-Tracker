@@ -14,9 +14,12 @@ internal sealed class ExpenseRepository(AppDbContext dbContext) : IExpenseReposi
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken) =>
         await dbContext.Expenses.Where(e => e.Id == id).ExecuteDeleteAsync(cancellationToken) > 0;
 
-    public async Task<IReadOnlyList<Guid>> DeleteManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Guid>> DeleteManyAsync(
+        IReadOnlyCollection<Guid> ids, Guid? onlyCreatedBy, CancellationToken cancellationToken)
     {
-        var existing = await dbContext.Expenses.Where(e => ids.Contains(e.Id)).Select(e => e.Id).ToListAsync(cancellationToken);
+        var existing = await dbContext.Expenses
+            .Where(e => ids.Contains(e.Id) && (onlyCreatedBy == null || e.CreatedByUserId == onlyCreatedBy))
+            .Select(e => e.Id).ToListAsync(cancellationToken);
         if (existing.Count > 0)
         {
             await dbContext.Expenses.Where(e => existing.Contains(e.Id)).ExecuteDeleteAsync(cancellationToken);

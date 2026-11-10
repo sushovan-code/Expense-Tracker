@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
@@ -14,17 +12,16 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Categories",
+                name: "Families",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false, collation: "NOCASE"),
-                    Color = table.Column<string>(type: "TEXT", maxLength: 7, nullable: false),
-                    MonthlyBudget = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: true)
+                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Categories", x => x.Id);
+                    table.PrimaryKey("PK_Families", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -72,26 +69,49 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Expenses",
+                name: "Categories",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false, collation: "NOCASE"),
-                    Amount = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    Date = table.Column<DateOnly>(type: "TEXT", nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true, collation: "NOCASE"),
-                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
-                    CategoryId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    FamilyId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false, collation: "NOCASE"),
+                    Color = table.Column<string>(type: "TEXT", maxLength: 7, nullable: false),
+                    MonthlyBudget = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Expenses", x => x.Id);
+                    table.PrimaryKey("PK_Categories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Expenses_Categories_CategoryId",
-                        column: x => x.CategoryId,
-                        principalTable: "Categories",
+                        name: "FK_Categories_Families_FamilyId",
+                        column: x => x.FamilyId,
+                        principalTable: "Families",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FamilyInvites",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    FamilyId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Role = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    TokenHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    ExpiresAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    AcceptedAt = table.Column<long>(type: "INTEGER", nullable: true),
+                    RevokedAt = table.Column<long>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FamilyInvites", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_FamilyInvites_Families_FamilyId",
+                        column: x => x.FamilyId,
+                        principalTable: "Families",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -135,6 +155,33 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                     table.PrimaryKey("PK_ApiKeys", x => x.Id);
                     table.ForeignKey(
                         name: "FK_ApiKeys_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FamilyMembers",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    FamilyId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Role = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    JoinedAt = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FamilyMembers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_FamilyMembers_Families_FamilyId",
+                        column: x => x.FamilyId,
+                        principalTable: "Families",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_FamilyMembers_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -251,19 +298,36 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.InsertData(
-                table: "Categories",
-                columns: new[] { "Id", "Color", "MonthlyBudget", "Name" },
-                values: new object[,]
+            migrationBuilder.CreateTable(
+                name: "Expenses",
+                columns: table => new
                 {
-                    { new Guid("0192f0a0-0000-7000-8000-000000000001"), "#f97316", null, "Food" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000002"), "#3b82f6", null, "Transport" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000003"), "#8b5cf6", null, "Housing" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000004"), "#06b6d4", null, "Utilities" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000005"), "#ec4899", null, "Entertainment" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000006"), "#22c55e", null, "Health" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000007"), "#eab308", null, "Shopping" },
-                    { new Guid("0192f0a0-0000-7000-8000-000000000008"), "#64748b", null, "Other" }
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false, collation: "NOCASE"),
+                    Amount = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
+                    Date = table.Column<DateOnly>(type: "TEXT", nullable: false),
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true, collation: "NOCASE"),
+                    CreatedAt = table.Column<long>(type: "INTEGER", nullable: false),
+                    FamilyId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    IsPrivate = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CategoryId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Expenses", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Expenses_Categories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "Categories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Expenses_Families_FamilyId",
+                        column: x => x.FamilyId,
+                        principalTable: "Families",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -278,9 +342,9 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Categories_Name",
+                name: "IX_Categories_FamilyId_Name",
                 table: "Categories",
-                column: "Name",
+                columns: new[] { "FamilyId", "Name" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -292,6 +356,33 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                 name: "IX_Expenses_Date",
                 table: "Expenses",
                 column: "Date");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Expenses_FamilyId",
+                table: "Expenses",
+                column: "FamilyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FamilyInvites_FamilyId",
+                table: "FamilyInvites",
+                column: "FamilyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FamilyInvites_TokenHash",
+                table: "FamilyInvites",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FamilyMembers_FamilyId",
+                table: "FamilyMembers",
+                column: "FamilyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FamilyMembers_UserId",
+                table: "FamilyMembers",
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_SessionId",
@@ -357,6 +448,12 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                 name: "Expenses");
 
             migrationBuilder.DropTable(
+                name: "FamilyInvites");
+
+            migrationBuilder.DropTable(
+                name: "FamilyMembers");
+
+            migrationBuilder.DropTable(
                 name: "RefreshTokens");
 
             migrationBuilder.DropTable(
@@ -382,6 +479,9 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "Users");
+
+            migrationBuilder.DropTable(
+                name: "Families");
         }
     }
 }

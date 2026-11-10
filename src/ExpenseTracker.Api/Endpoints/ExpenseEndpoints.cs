@@ -83,7 +83,7 @@ internal static class ExpenseEndpoints
 
     private static async Task<Results<Ok<ExpenseSummary>, ProblemHttpResult>> Summary(
         [AsParameters] SummaryQuery query, IExpenseService service, CancellationToken cancellationToken) =>
-        (await service.SummarizeAsync(query.From, query.To, cancellationToken)).ToHttpResult(TypedResults.Ok);
+        (await service.SummarizeAsync(query.From, query.To, query.MemberId, cancellationToken)).ToHttpResult(TypedResults.Ok);
 
     private static async Task<Results<Ok<ExpenseDto>, ProblemHttpResult>> Get(
         Guid id, IExpenseService service, CancellationToken cancellationToken) =>

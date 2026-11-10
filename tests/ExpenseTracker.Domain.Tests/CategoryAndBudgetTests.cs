@@ -8,7 +8,7 @@ public class CategoryTests
     [Fact]
     public void Create_normalises_name_and_color()
     {
-        var result = Category.Create("  Travel  ", "#4F46E5", 1500m);
+        var result = Category.Create("  Travel  ", "#4F46E5", 1500m, Guid.NewGuid());
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.Name.ShouldBe("Travel");
@@ -23,7 +23,7 @@ public class CategoryTests
     [InlineData("Travel", "#4f46e5", -1, "monthlyBudget")]
     public void Create_rejects_invalid_input(string name, string color, int? budget, string field)
     {
-        var result = Category.Create(name, color, budget);
+        var result = Category.Create(name, color, budget, Guid.NewGuid());
 
         result.IsSuccess.ShouldBeFalse();
         result.Error.Field.ShouldBe(field);
@@ -32,8 +32,8 @@ public class CategoryTests
     [Fact]
     public void A_budget_of_zero_is_allowed_and_null_means_no_limit()
     {
-        Category.Create("A", "#000000", 0).IsSuccess.ShouldBeTrue();
-        Category.Create("B", "#000000", null).Value!.MonthlyBudget.ShouldBeNull();
+        Category.Create("A", "#000000", 0, Guid.NewGuid()).IsSuccess.ShouldBeTrue();
+        Category.Create("B", "#000000", null, Guid.NewGuid()).Value!.MonthlyBudget.ShouldBeNull();
     }
 }
 

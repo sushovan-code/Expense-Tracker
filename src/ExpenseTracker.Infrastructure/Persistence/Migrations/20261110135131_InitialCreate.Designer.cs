@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261108171457_InitialCreate")]
+    [Migration("20261110135131_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -30,6 +30,9 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                         .HasMaxLength(7)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal?>("MonthlyBudget")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
@@ -42,60 +45,10 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("FamilyId", "Name")
                         .IsUnique();
 
                     b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000001"),
-                            Color = "#f97316",
-                            Name = "Food"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000002"),
-                            Color = "#3b82f6",
-                            Name = "Transport"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000003"),
-                            Color = "#8b5cf6",
-                            Name = "Housing"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000004"),
-                            Color = "#06b6d4",
-                            Name = "Utilities"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000005"),
-                            Color = "#ec4899",
-                            Name = "Entertainment"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000006"),
-                            Color = "#22c55e",
-                            Name = "Health"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000007"),
-                            Color = "#eab308",
-                            Name = "Shopping"
-                        },
-                        new
-                        {
-                            Id = new Guid("0192f0a0-0000-7000-8000-000000000008"),
-                            Color = "#64748b",
-                            Name = "Other"
-                        });
                 });
 
             modelBuilder.Entity("ExpenseTracker.Domain.Expenses.Expense", b =>
@@ -113,6 +66,9 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("TEXT");
 
@@ -121,6 +77,12 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -133,7 +95,99 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Date");
 
+                    b.HasIndex("FamilyId");
+
                     b.ToTable("Expenses");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Families.Family", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Families");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Families.FamilyInvite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("AcceptedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RevokedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("FamilyInvites");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Families.FamilyMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("JoinedAt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("FamilyMembers");
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.ApiKey", b =>
@@ -448,6 +502,15 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                     b.ToTable("UserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ExpenseTracker.Domain.Categories.Category", b =>
+                {
+                    b.HasOne("ExpenseTracker.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ExpenseTracker.Domain.Expenses.Expense", b =>
                 {
                     b.HasOne("ExpenseTracker.Domain.Categories.Category", "Category")
@@ -456,7 +519,37 @@ namespace ExpenseTracker.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("ExpenseTracker.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Families.FamilyInvite", b =>
+                {
+                    b.HasOne("ExpenseTracker.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ExpenseTracker.Domain.Families.FamilyMember", b =>
+                {
+                    b.HasOne("ExpenseTracker.Domain.Families.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ExpenseTracker.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ExpenseTracker.Infrastructure.Identity.ApiKey", b =>

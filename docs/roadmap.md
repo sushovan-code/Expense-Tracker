@@ -39,6 +39,8 @@ This slice replaces adoption-plan slice 2 (Testcontainers is no longer needed).
 
 ## 2. `feature/<n>-family-groups` (main feature)
 
+Backend (PR A, `feature/2a-family-isolation`) is built; web, seed and docs follow in PR B. Simplified: no SaveChanges interceptor and no separate membership cache (see ADR 0007).
+
 **Data**
 - [ ] `Family` (Id Guid, Name, CreatedAt).
 - [ ] `FamilyMember` (FamilyId, UserId **unique**, Role: Owner | Member | Viewer, JoinedAt). One family per user.
